@@ -22,7 +22,7 @@ The UI is one canvas plus one panel with a modest amount of state, so a framewor
 
 ### Module layout
 - `src/band.ts`: pure geometry. `tangents`, `arcs`, `bandPath`, `cornerForm`, `validate`, plus sampling helpers for the tests. No DOM.
-- `src/presets.ts`: preset data. The diamond is computed by the rule in the brief: tips (50,4), (90,50), (50,96), (10,50) with r 4, and between each pair of tips a concave r 90 circle whose centre sits outward from the side's midpoint at `sqrt(94.5² − (side/2)²)` ≈ 89.45. This gives centres around (128.70, −40.50), (128.70, 140.50), (−28.70, 140.50) and (−28.70, −40.50). Order: top tip, concave, right tip, concave, and so on.
+- `src/presets.ts`: preset data. The diamond is computed by the rule in the brief: tips (50,4), (90,50), (50,96), (10,50) with r 4, and between each pair of tips a concave r 90 circle whose centre sits outward from the side's midpoint, along the side's normal, at `sqrt(94.5² − (side/2)²)` ≈ 89.45. Measuring along the normal (not along the line from the canvas centre) is what keeps each concave circle 0.5 units clear of both tips. This gives centres around (137.50, −31.69), (137.50, 131.69), (−37.50, 131.69) and (−37.50, −31.69). Order: top tip, concave, right tip, concave, and so on.
 - `src/document.ts`: types, parsing and validation, localStorage persistence, file I/O.
 - `src/store.ts`: state (document, selection, view, toggles), immutable updates, undo/redo stacks of document snapshots (capped at 200). A drag opens a "transaction" that commits one snapshot on pointer-up.
 - `src/symmetry.ts`: twin pairing and mirrored edits.
