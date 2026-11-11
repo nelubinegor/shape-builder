@@ -26,23 +26,23 @@
 
 ## 5. Editor UI (`src/ui/*`, `src/style.css`)
 
-- [ ] 5.1 Build the layout and styling (white canvas, `#0D2DD7` accents, uniform `--radius`, Aquawax Fx → fallback font). Verify by eye in `npm run dev` that no element mixes sharp and rounded corners
-- [ ] 5.2 Canvas rendering: filled band, selection, construction overlay toggle (solid/dashed circles, tangent dots), corner preview toggle with radius labels, validation highlights, grid toggle. Verify in the browser with the heart and club presets
-- [ ] 5.3 Canvas interactions: click to add, drag centre, drag rim handle (min r 0.5), zoom around the pointer, pan, snapping for drags only. Verify in the browser that each drag undoes in one step
-- [ ] 5.4 Keyboard: arrow nudge (Alt = 0.1), Shift+arrow resize, C toggles mode, Delete, Tab cycles selection, Ctrl/Cmd+Z / Shift+Z / Ctrl+Y. Verify each shortcut in the browser
-- [ ] 5.5 Side panel: rows in band order with x/y/r inputs, mode toggle, duplicate (+2,+2), delete, drag-to-reorder and keyboard move up/down, validation messages. Verify in the browser that edits update the canvas live
-- [ ] 5.6 Toolbar: preset picker (undoable), symmetry toggle, overlay/corner/grid/snap toggles, save/open JSON. Verify that loading a preset and opening a file can each be undone
+- [x] 5.1 Build the layout and styling (white canvas, `#0D2DD7` accents, uniform `--radius`, Aquawax Fx → fallback font). Verify by eye in `npm run dev` that no element mixes sharp and rounded corners
+- [x] 5.2 Canvas rendering: filled band, selection, construction overlay toggle (solid/dashed circles, tangent dots), corner preview toggle with radius labels, validation highlights, grid toggle. Verify in the browser with the heart and club presets
+- [x] 5.3 Canvas interactions: click to add, drag centre, drag rim handle (min r 0.5), zoom around the pointer, pan, snapping for drags only. Verify in the browser that each drag undoes in one step
+- [x] 5.4 Keyboard: arrow nudge (Alt = 0.1), Shift+arrow resize, C toggles mode, Delete, Tab cycles selection, Ctrl/Cmd+Z / Shift+Z / Ctrl+Y. Verify each shortcut in the browser
+- [x] 5.5 Side panel: rows in band order with x/y/r inputs, mode toggle, duplicate (+2,+2), delete, drag-to-reorder and keyboard move up/down, validation messages. Verify in the browser that edits update the canvas live
+- [x] 5.6 Toolbar: preset picker (undoable), symmetry toggle, overlay/corner/grid/snap toggles, save/open JSON. Verify that loading a preset and opening a file can each be undone
 
 ## 6. Export (`src/export.ts`, export panel)
 
 - [x] 6.1 Implement the flattened SVG and rounded-corner SVG builders with fill, overlay and scale options. Verify with unit tests: viewBox and scaling at scale 4, overlay absent by default, rounded path has only M/L/Z and `data-corner-radii` count equals the vertex count
 - [x] 6.2 Implement the VectorNetwork JSON builder. Verify with a unit test: N vertices, N closed-loop segments, one NONZERO region
-- [ ] 6.3 Build the export panel: Copy to clipboard and Download .svg per format, Copy for Figma, options, copy confirmation, invalid-shape warning, and a note that rounded corners show sharp in other apps. Verify in the browser by pasting the flattened SVG into a new tab and comparing it with the canvas
+- [x] 6.3 Build the export panel: Copy to clipboard and Download .svg per format, Copy for Figma, options, copy confirmation, invalid-shape warning, and a note that rounded corners show sharp in other apps. Verify in the browser by pasting the flattened SVG into a new tab and comparing it with the canvas
 
 ## 7. Integration check
 
-- [ ] 7.1 Add a Playwright smoke script (`scripts/smoke.mjs`) that loads the built app, loads each preset, toggles the overlay, and checks that the band path exists and that exported SVG matches the canvas path. Verify that `npm run build && node scripts/smoke.mjs` passes
-- [ ] 7.2 Run `npm test`, `npm run build` and `openspec validate add-band-shape-tool --strict`. Verify that all pass
+- [x] 7.1 Add a Playwright smoke script (`scripts/smoke.mjs`) that loads the built app, loads each preset, toggles the overlay, and checks that the band path exists and that exported SVG matches the canvas path. Verify that `npm run build && node scripts/smoke.mjs` passes
+- [x] 7.2 Run `npm test`, `npm run build` and `openspec validate add-band-shape-tool --strict`. Verify that all pass
 
 ## Workflow follow-up
 
