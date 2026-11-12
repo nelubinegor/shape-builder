@@ -52,14 +52,16 @@ A single `window` keydown handler replaces the canvas handler. It ignores events
 `src/presets.ts` exports `circle`, `cross`, `head` and `hand`. The suits move to `test/fixtures.ts`, because the geometry tests rely on them (including the comparison with the reference implementation).
 
 Cross, head and hand come from the twostu Design Library in Figma (file `orrEBTSjd4MJu0xIAfkrxs`, page "icons"; nodes `2618:372` cross, `2618:362` head, `2618:369` hand). Each 24×24 icon frame maps to the 100×100 artboard (×100/24), keeping the icon's own margins. Values were derived during planning and checked: no invalid pairs or nesting, and corner form and flattened form agree to 1e-14.
-- **Hand:** the Figma outline is made entirely of circular arcs and tangent lines, so each arc's circle was recovered by fitting it through the curve's start, mid and end points. The trace matches the source exactly. The only manual edit: two near-duplicate tiny circles at the knuckle notch were merged into one (r 0.7), because they made an impossible pair.
-- **Cross and head:** sharp polygons in Figma. Each vertex became a small circle touching both edges: convex at outward corners, concave at inward ones (cross r 1.04, head r 1.25). That rounds the corners very slightly, since a band needs a radius above 0.
+- **Method:** the outlines come from each vector's `fillGeometry`, which is the rendered outline with Figma's per-point corner radii applied. (The raw `vectorPaths` leave the corners sharp.) Every rendered outline is made only of circular arcs and tangent lines, so each arc's circle was recovered by fitting it through the arc's start, mid and end points. The traces match the sources exactly.
+- **Hand:** 16 circles. The only manual edit: two near-duplicate tiny circles at the knuckle notch were merged into one (r 0.7), because they made an impossible pair.
+- **Cross:** 12 circles: r 1 outer corners and r 2 inner fillets in icon units, i.e. 4.17 and 8.33 on the artboard.
+- **Head:** 13 circles: a large circle for the skull, the nose, lips and chin, and large curves at the nape and neck.
 - **Circle:** `[[50, 50, 30]]`.
 
 ```js
 circle: [[50,50,30]]
-cross:  [[59.38,40.63,-1.04],[86.46,42.71,1.04],[86.46,57.29,1.04],[59.38,59.38,-1.04],[57.29,86.46,1.04],[42.71,86.46,1.04],[40.63,59.38,-1.04],[13.54,57.29,1.04],[13.54,42.71,1.04],[40.63,40.63,-1.04],[42.71,13.54,1.04],[57.29,13.54,1.04]]
-head:   [[8.14,21.71,1.25],[56.44,3.68,1.25],[73.89,29.98,1.25],[75.93,38.75,-1.25],[81.88,48.69,1.25],[78.66,53.86,-1.25],[78.29,57.72,1.25],[78.44,60.47,-1.25],[76.9,62.44,1.25],[76.02,66.05,-1.25],[74.7,73.17,1.25],[56.33,75.67,-1.25],[41.25,96.02,1.25],[16.71,88.22,1.25],[22.45,62.53,-1.25]]
+cross:  [[66.67,33.33,-8.33],[83.33,45.83,4.17],[83.33,54.17,4.17],[66.67,66.67,-8.33],[54.17,83.33,4.17],[45.83,83.33,4.17],[33.33,66.67,-8.33],[16.67,54.17,4.17],[16.67,45.83,4.17],[33.33,33.33,-8.33],[45.83,16.67,4.17],[54.17,16.67,4.17]]
+head:   [[62.45,33.1,12.5],[78.91,37.66,-4.17],[77.99,48.26,3.78],[80.61,54.23,-2.64],[76.26,57.23,2.64],[77.04,60.38,-0.5],[75.56,62.42,2.02],[77.46,66.67,-2.57],[71.24,70.25,4.17],[60.35,82.76,-8.33],[34.78,78.95,15.56],[6.02,63.19,-16.67],[45.35,37.85,29.38]]
 hand:   [[44.22,11.7,4.5],[48.78,42.65,-1.8],[68.9,16.46,4.47],[61.37,48.75,-1.78],[62.48,54.96,4.51],[66.45,58.75,-0.7],[64.73,62.66,3.37],[65.23,72.09,-3.6],[40.47,80.32,13.49],[28.42,79.58,1.8],[32,71.8,-6.74],[46.26,71.24,4.5],[55.76,61.97,-3.39],[42.33,63.12,-4.49],[30.96,62.47,1.8],[27.04,49.75,-7.2]]
 ```
 
@@ -79,4 +81,3 @@ hand:   [[44.22,11.7,4.5],[48.78,42.65,-1.8],[68.9,16.46,4.47],[61.37,48.75,-1.7
 - [Auto-order fails for hook-shaped outlines] → One explicit, undoable action; never applied automatically.
 - [Inside/outside polygon sampling is approximate near the outline] → Only used to choose a default mode; errors near the edge are harmless and C toggles the mode.
 - [Space conflicts with pressing focused buttons] → Space-to-pan is ignored when focus is on a button, input or select, so keyboard activation still works.
-- [Head and cross corners are slightly rounded compared with the sharp Figma originals] → Unavoidable with a band; the corner circles can be made smaller in the panel if needed.
