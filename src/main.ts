@@ -66,18 +66,36 @@ store.subscribe((s, kind) => {
   schedule();
 });
 
-// Global shortcuts: undo/redo (native undo stays inside text fields).
+// Global shortcuts. Text fields keep their own keys; Space is left to focused controls.
+const isTextField = (t: EventTarget | null) =>
+  t instanceof HTMLElement &&
+  (t.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), textarea, select') || t.isContentEditable);
+const isControl = (t: EventTarget | null) =>
+  t instanceof HTMLElement && t.matches('button, input, select, textarea, a[href], [contenteditable="true"]');
+
 window.addEventListener('keydown', (e) => {
+  if (isTextField(e.target)) return;
   const mod = e.ctrlKey || e.metaKey;
-  if (!mod) return;
-  const t = e.target as HTMLElement;
-  if (t.matches('input[type="text"], input[type="number"], textarea')) return;
-  const key = e.key.toLowerCase();
-  if (key === 'z' && !e.shiftKey) store.undo();
-  else if ((key === 'z' && e.shiftKey) || key === 'y') store.redo();
-  else return;
-  e.preventDefault();
+  if (mod) {
+    const key = e.key.toLowerCase();
+    if (key === 'z' && !e.shiftKey) store.undo();
+    else if ((key === 'z' && e.shiftKey) || key === 'y') store.redo();
+    else return;
+    e.preventDefault();
+    return;
+  }
+  if (e.key === ' ' || e.code === 'Space') {
+    if (isControl(e.target) && !canvas.pointerInside) return;
+    canvas.setSpace(true);
+    e.preventDefault();
+    return;
+  }
+  if (canvas.handleKey(e)) e.preventDefault();
 });
+window.addEventListener('keyup', (e) => {
+  if (e.key === ' ' || e.code === 'Space') canvas.setSpace(false);
+});
+window.addEventListener('blur', () => canvas.setSpace(false));
 
 renderAll();
 if (restored.error) store.notify(restored.error, 'error');

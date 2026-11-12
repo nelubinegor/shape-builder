@@ -35,33 +35,45 @@ export function mountExportPanel(host: HTMLElement, store: Store): ExportApi {
     <section class="group" aria-labelledby="export-h">
       <h2 id="export-h">Export</h2>
       <p class="warning" id="export-warning" role="status" hidden>The shape has invalid circles, so the outline may be malformed.</p>
-      <div class="export-format">
-        <div>
-          <h3>Flattened SVG</h3>
-          <p class="muted small">One path with arcs. Pixel-exact in Figma, Illustrator and browsers.</p>
-        </div>
-        <div class="button-row">
-          <button data-copy="flattened">Copy SVG</button>
-          <button data-download="flattened">Download .svg</button>
-        </div>
+      <div class="segmented" role="radiogroup" aria-label="SVG format">
+        <button role="radio" data-format="flattened" aria-checked="true">Flattened</button>
+        <button role="radio" data-format="rounded" aria-checked="false">Rounded corners</button>
       </div>
-      <div class="export-format">
-        <div>
-          <h3>Rounded-corner SVG</h3>
-          <p class="muted small">Straight edges plus a radius per corner in <code>data-corner-radii</code>. Other apps show sharp corners; use Copy for Figma to keep them editable.</p>
-        </div>
-        <div class="button-row">
-          <button data-copy="rounded">Copy SVG</button>
-          <button data-download="rounded">Download .svg</button>
-          <button id="copy-figma">Copy for Figma</button>
-        </div>
+      <p class="muted small" id="format-note"></p>
+      <div class="button-row">
+        <button id="copy-svg">Copy SVG</button>
+        <button id="download-svg">Download .svg</button>
+        <button id="copy-figma" title="Vector network with editable corner radii">Copy for Figma</button>
       </div>
       <div class="field-row options">
         <label class="field"><span>Scale</span><input id="export-scale" type="number" min="0.01" step="any"></label>
         <label class="check"><input id="export-overlay" type="checkbox"> Include construction</label>
       </div>
-      <p class="muted small">Fill uses the shape colour above.</p>
     </section>`;
+
+  const NOTES: Record<SvgFormat, string> = {
+    flattened: 'One path with exact arcs. Pastes cleanly into Figma, Illustrator and browsers.',
+    rounded: 'Straight edges with each corner radius in data-corner-radii. Other apps show sharp corners; use Copy for Figma to keep them editable.',
+  };
+  let format: SvgFormat = 'flattened';
+  const note = host.querySelector<HTMLParagraphElement>('#format-note')!;
+  const formatButtons = host.querySelectorAll<HTMLButtonElement>('[data-format]');
+  const setFormat = (f: SvgFormat) => {
+    format = f;
+    formatButtons.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.format === f)));
+    note.textContent = NOTES[f];
+  };
+  formatButtons.forEach((b) => b.addEventListener('click', () => setFormat(b.dataset.format as SvgFormat)));
+  host.querySelector('.segmented')!.addEventListener('keydown', (e) => {
+    const k = (e as KeyboardEvent).key;
+    if (k === 'ArrowLeft' || k === 'ArrowRight') {
+      setFormat(format === 'flattened' ? 'rounded' : 'flattened');
+      host.querySelector<HTMLButtonElement>(`[data-format="${format}"]`)!.focus();
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+  setFormat('flattened');
 
   const warning = host.querySelector<HTMLParagraphElement>('#export-warning')!;
   const scale = host.querySelector<HTMLInputElement>('#export-scale')!;
@@ -74,20 +86,14 @@ export function mountExportPanel(host: HTMLElement, store: Store): ExportApi {
   };
   const warnSuffix = () => (isInvalid() ? ' (warning: outline may be malformed)' : '');
 
-  host.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const f = b.dataset.copy as SvgFormat;
-      const ok = await copyText(buildSvg(store.doc, f, opts()));
-      store.notify(ok ? `Copied ${f} SVG${warnSuffix()}` : 'Copy failed', ok ? 'info' : 'error');
-    }),
-  );
-  host.querySelectorAll<HTMLButtonElement>('[data-download]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const f = b.dataset.download as SvgFormat;
-      downloadText(exportFileName(store.shape, f), buildSvg(store.doc, f, opts()), 'image/svg+xml');
-      if (isInvalid()) store.notify(`Downloaded${warnSuffix()}`);
-    }),
-  );
+  host.querySelector('#copy-svg')!.addEventListener('click', async () => {
+    const ok = await copyText(buildSvg(store.doc, format, opts()));
+    store.notify(ok ? `Copied ${format} SVG${warnSuffix()}` : 'Copy failed', ok ? 'info' : 'error');
+  });
+  host.querySelector('#download-svg')!.addEventListener('click', () => {
+    downloadText(exportFileName(store.shape, format), buildSvg(store.doc, format, opts()), 'image/svg+xml');
+    if (isInvalid()) store.notify(`Downloaded${warnSuffix()}`);
+  });
   host.querySelector('#copy-figma')!.addEventListener('click', async () => {
     const json = JSON.stringify(vectorNetwork(store.shape, opts().scale), null, 2);
     const ok = await copyText(json);

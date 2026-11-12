@@ -74,10 +74,11 @@ button:disabled {
   cursor: default;
 }
 
-button.toggle[aria-pressed='true'] {
-  background: var(--blue);
+button.toggle[aria-pressed='true'],
+.segmented button[aria-checked='true'] {
+  background: var(--blue-soft);
   border-color: var(--blue);
-  color: #fff;
+  color: var(--blue);
 }
 
 :focus-visible {
@@ -165,11 +166,64 @@ input[type='color']::-webkit-color-swatch {
   position: relative;
 }
 
+.canvas-hud {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.canvas-hud > * {
+  pointer-events: auto;
+}
+
+.hint {
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.zoom button {
+  padding: 2px 8px;
+  border-color: transparent;
+}
+
+.zoom button.icon {
+  width: 26px;
+  padding: 2px 0;
+}
+
+.zoom-level {
+  min-width: 44px;
+  text-align: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .canvas {
   display: block;
   width: 100%;
   height: 100%;
-  cursor: crosshair;
+  cursor: default;
   touch-action: none;
   user-select: none;
 }
@@ -203,6 +257,10 @@ input[type='color']::-webkit-color-swatch {
   stroke: var(--blue);
 }
 
+.canvas .circle.hover {
+  stroke-opacity: 0.7;
+}
+
 .canvas .circle.invalid {
   stroke: var(--warn);
 }
@@ -231,26 +289,15 @@ input[type='color']::-webkit-color-swatch {
   vector-effect: non-scaling-stroke;
 }
 
-.canvas .hit {
-  fill: transparent;
-  cursor: move;
-}
-
-.canvas .hit.ring {
-  fill: none;
-  stroke: transparent;
-  pointer-events: stroke;
-}
-
 .canvas .centre {
   fill: var(--blue);
-  cursor: move;
+  pointer-events: none;
 }
 
 .canvas .rim-handle {
   fill: var(--paper);
   stroke: var(--blue);
-  cursor: ew-resize;
+  pointer-events: none;
 }
 
 /* Side panel */
@@ -326,18 +373,42 @@ code {
   padding-bottom: 5px;
 }
 
+.shape-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.name-input {
+  flex: 1;
+  font-weight: 600;
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.list-head h2 {
+  margin: 0;
+}
+
 .circle-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .circle-row {
   border: 1px solid var(--line);
-  padding: 6px;
+  padding: 4px;
   background: var(--paper);
 }
 
@@ -362,40 +433,77 @@ code {
   box-shadow: 0 2px 0 var(--blue);
 }
 
-.row-head {
-  display: flex;
+.row-main {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr 1fr 1fr;
   gap: 4px;
   align-items: center;
-  margin-bottom: 6px;
 }
 
-.row-head .spacer {
-  flex: 1;
-}
-
-.row-head button {
-  padding: 2px 7px;
+.row-main button {
+  padding: 2px 6px;
   font-size: 12px;
 }
 
-.row-head button.index {
-  min-width: 28px;
+.row-main button.index {
+  min-width: 26px;
   font-variant-numeric: tabular-nums;
 }
 
-.row-head button.index[aria-pressed='true'] {
+.row-main button.index[aria-pressed='true'] {
   background: var(--blue);
   border-color: var(--blue);
   color: #fff;
 }
 
-.row-head button.mode.concave {
+.mode-icon {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+
+.mode.convex .mode-icon {
+  background: currentColor;
+}
+
+.mode.concave .mode-icon {
   border-style: dashed;
 }
 
-.row-head button.icon {
-  width: 26px;
+.field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+}
+
+.field.inline span {
+  color: var(--ink-3);
+  width: 8px;
+}
+
+.field.inline input {
+  padding: 3px 4px;
+  min-width: 0;
+}
+
+.row-actions,
+.row-tag {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.row-actions .spacer {
+  flex: 1;
+}
+
+.row-actions button {
   padding: 2px 0;
+  width: 26px;
+  font-size: 12px;
 }
 
 .drag-grip {
@@ -403,13 +511,17 @@ code {
   cursor: grab;
   font-size: 11px;
   letter-spacing: -2px;
-  padding: 0 4px 0 0;
+  padding: 0 2px 0 0;
 }
 
-.row-fields {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+.segmented {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.segmented button {
+  flex: 1;
 }
 
 .tag {
@@ -437,14 +549,6 @@ code {
   margin: 0 0 8px;
 }
 
-.export-format {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 0;
-  border-top: 1px solid var(--line);
-}
-
 .button-row {
   display: flex;
   gap: 6px;
@@ -452,8 +556,7 @@ code {
 }
 
 .options {
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
+  margin-top: 10px;
 }
 
 .options .field {

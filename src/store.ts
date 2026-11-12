@@ -29,6 +29,14 @@ export interface UIState {
 
 export const HISTORY_LIMIT = 200;
 
+/** Margin around the artboard in the default view, as a fraction of its size. */
+export const FIT_MARGIN = 0.08;
+
+/** The default view: the whole artboard with a margin on every side. */
+export function fitView(width: number, height: number): View {
+  return { x: -width * FIT_MARGIN, y: -height * FIT_MARGIN, w: width * (1 + 2 * FIT_MARGIN), h: height * (1 + 2 * FIT_MARGIN) };
+}
+
 type Listener = (s: Store, kind: 'doc' | 'ui') => void;
 
 export class Store {
@@ -49,7 +57,7 @@ export class Store {
       grid: true,
       snap: true,
       gridStep: 1,
-      view: { x: 0, y: 0, w: width, h: height },
+      view: fitView(width, height),
       exportOpts: { fill: doc.shapes[0].fill, overlay: false, scale: 1 },
       message: null,
       ...ui,
