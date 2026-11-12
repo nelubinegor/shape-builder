@@ -97,11 +97,15 @@ The editor SHALL show a side panel with the shape's name and fill in its header 
 - **THEN** row 9 scrolls into view and is highlighted
 
 ### Requirement: Presets
-The editor SHALL offer circle, cross, head and hand presets. Circle is a single convex circle; cross is a plus sign with rounded arm ends and rounded inner corners; head is a person's head-and-shoulders silhouette; hand is the twostu hand logo, traced from the Figma source. Loading a preset MUST be undoable.
+The editor SHALL offer circle, cross, head and hand presets. Circle is a single convex circle; cross, head (a profile silhouette) and hand (a peace-sign hand) reproduce the matching icons in the twostu Design Library in Figma. Loading a preset MUST be undoable.
 
 #### Scenario: Load circle
 - **WHEN** the user picks the circle preset
 - **THEN** the shape contains exactly one convex circle centred at (50, 50)
+
+#### Scenario: Hand matches the source
+- **WHEN** the user picks the hand preset
+- **THEN** the shape has 16 circles and its outline matches the Figma hand icon scaled to the artboard
 
 #### Scenario: Presets are valid
 - **WHEN** any preset is loaded

@@ -14,7 +14,7 @@ The first version of the editor works, but it's awkward to use. A single click a
 - Holding Alt while dragging skips grid snapping.
 - Editing shortcuts (arrows, Shift+arrows, C, Delete, Esc) work whenever focus isn't in a text field, not only when the canvas is focused.
 - View: the default view fits the artboard with a margin; −/+/Fit zoom controls sit on the canvas; a one-line hint shows the relevant shortcuts.
-- **Presets:** the four card suits are replaced by **circle** (the new default for a fresh document), **cross**, **head** (a person's head and shoulders) and **hand** (the twostu hand logo from Figma). A one-circle shape now works in every form, including the rounded-corner export.
+- **Presets:** the four card suits are replaced by **circle** (the new default for a fresh document), **cross**, **head** (a profile silhouette) and **hand** (a peace-sign hand), all reproduced from the twostu Design Library icons in Figma. A one-circle shape now works in every form, including the rounded-corner export.
 - Panel: one-line circle rows, with row actions shown only on the selected row; selecting on the canvas scrolls its row into view; shape name and fill move into the panel header; a shorter export section with a Flattened/Rounded switch; calmer toggle styling.
 
 Not included: an Add tool with live preview, selecting several circles, right-click menus, re-sorting circles automatically while editing.
@@ -34,5 +34,4 @@ Not included: an Add tool with live preview, selecting several circles, right-cl
 - Code: `src/ui/canvas.ts` (picking, pointer/keyboard handling, hover, zoom controls, hint), `src/ui/panel.ts`, `src/ui/exportPanel.ts`, `src/ui/toolbar.ts`, `src/style.css`, `src/main.ts` (global shortcuts); new pure helpers for picking, nearest-segment insertion, inside/outside test and auto-order, with unit tests.
 - `scripts/smoke.mjs` needs updating: click-to-add becomes double-click, drag-to-pan becomes Space + drag.
 - Geometry and export only change for single-circle shapes; the document format is unchanged. The suit presets stay as test fixtures.
-- The hand preset needs the Figma file of the hand logo.
 - Depends on `add-band-shape-tool`: archive it first, so that the `shape-editor` spec this change modifies exists.

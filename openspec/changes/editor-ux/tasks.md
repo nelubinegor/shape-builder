@@ -8,8 +8,8 @@
 
 - [ ] 2.1 Support single-circle loops in `cornerForm` and `bandPrimitives` (`src/band.ts`). Verify with unit tests: 3 vertices at distance 2R with radius R, and the flattened and corner forms agree within 1e-6
 - [ ] 2.2 Move the suit presets to `test/fixtures.ts` and point the existing geometry, document and export tests at them. Verify that `npm test` passes unchanged
-- [ ] 2.3 Replace `src/presets.ts` with circle, cross and head (values from design.md, tuned by eye if needed), and make circle the default for a fresh document. Verify with unit tests: every preset is valid (no invalid pairs or nesting), circle is one convex circle at (50, 50), and a fresh document starts with circle
-- [ ] 2.4 Trace the hand logo from the Figma file into a `hand` preset (comment naming the Figma node). Verify that a unit test finds it valid, and that a screenshot of it in the editor looks like the Figma logo
+- [ ] 2.3 Replace `src/presets.ts` with circle, cross, head and hand (values from design.md, with a comment naming each Figma node), and make circle the default for a fresh document. Verify with unit tests: every preset is valid (no invalid pairs or nesting), corner and flattened forms agree, hand has 16 circles, circle is one convex circle at (50, 50), and a fresh document starts with circle
+- [ ] 2.4 Compare each Figma-based preset with its source. Verify by screenshot that cross, head and hand in the editor match the Figma icons (`get_screenshot` on nodes 2618:372, 2618:362, 2618:369)
 
 ## 3. Interaction helpers (`src/interact.ts`)
 
