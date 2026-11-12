@@ -1,21 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { validate } from '../src/band';
+import {
+  bandPrimitives, cornerForm, distanceToPrimitives, filletPrimitives, samplePrimitives, validate,
+} from '../src/band';
+import { presetNames } from '../src/presets';
 import {
   loadStored, newDocument, parseDocument, presetShape, saveStored, serialize, STORAGE_KEY, toSigned,
 } from '../src/document';
-import { diamond, presetNames } from '../src/presets';
+import { diamond, suitNames, suitShape } from './fixtures';
 
-describe('presets', () => {
+describe('suit fixtures', () => {
   it('load as valid shapes', () => {
-    for (const name of presetNames) {
-      const v = validate(toSigned(presetShape(name).circles));
+    for (const name of suitNames) {
+      const v = validate(toSigned(suitShape(name).circles));
       expect(v.invalidPairs, name).toEqual([]);
       expect(v.nested, name).toEqual([]);
     }
   });
 
   it('heart has the brief values in order', () => {
-    const c = presetShape('heart').circles.map((c) => [c.x, c.y, c.mode === 'concave' ? -c.r : c.r]);
+    const c = suitShape('heart').circles.map((c) => [c.x, c.y, c.mode === 'concave' ? -c.r : c.r]);
     expect(c).toEqual([[70, 35, 27], [50, 90, 4], [30, 35, 27], [50, 12, -3]]);
   });
 
@@ -37,9 +40,41 @@ describe('presets', () => {
   });
 });
 
+describe('presets', () => {
+  it('are valid and both outline forms agree', () => {
+    for (const name of presetNames) {
+      const C = toSigned(presetShape(name).circles);
+      const v = validate(C);
+      expect(v.invalidPairs, name).toEqual([]);
+      expect(v.nested, name).toEqual([]);
+      const band = bandPrimitives(C);
+      const fillet = filletPrimitives(cornerForm(C));
+      let worst = 0;
+      for (const p of samplePrimitives(band, 32)) worst = Math.max(worst, distanceToPrimitives(p, fillet));
+      expect(worst, name).toBeLessThan(1e-6);
+    }
+  });
+
+  it('circle is one convex circle at the centre', () => {
+    const c = presetShape('circle').circles;
+    expect(c).toHaveLength(1);
+    expect(c[0]).toMatchObject({ x: 50, y: 50, mode: 'convex' });
+  });
+
+  it('hand has 16 circles, head 13, cross 12', () => {
+    expect(presetShape('hand').circles).toHaveLength(16);
+    expect(presetShape('head').circles).toHaveLength(13);
+    expect(presetShape('cross').circles).toHaveLength(12);
+  });
+
+  it('a fresh document starts with the circle', () => {
+    expect(newDocument().shapes[0].name).toBe('circle');
+  });
+});
+
 describe('document', () => {
   it('round trips', () => {
-    const doc = newDocument(presetShape('club'));
+    const doc = newDocument(suitShape('club'));
     doc.shapes[0].name = 'My club';
     doc.shapes[0].fill = '#123456';
     doc.shapes[0].symmetry = true;
@@ -61,7 +96,7 @@ describe('document', () => {
   });
 
   it('rejects circles without a radius', () => {
-    const doc = JSON.parse(serialize(newDocument())) as { shapes: { circles: Record<string, unknown>[] }[] };
+    const doc = JSON.parse(serialize(newDocument(suitShape('heart')))) as { shapes: { circles: Record<string, unknown>[] }[] };
     delete doc.shapes[0].circles[1].r;
     const res = parseDocument(JSON.stringify(doc));
     expect(res.ok).toBe(false);
@@ -69,7 +104,7 @@ describe('document', () => {
   });
 
   it('rejects unknown mode', () => {
-    const doc = JSON.parse(serialize(newDocument())) as { shapes: { circles: Record<string, unknown>[] }[] };
+    const doc = JSON.parse(serialize(newDocument(suitShape('heart')))) as { shapes: { circles: Record<string, unknown>[] }[] };
     doc.shapes[0].circles[0].mode = 'wobbly';
     expect(parseDocument(JSON.stringify(doc)).ok).toBe(false);
   });
@@ -81,15 +116,15 @@ describe('localStorage', () => {
     return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), m };
   };
 
-  it('starts with the heart when empty', () => {
+  it('starts with the circle when empty', () => {
     const { doc } = loadStored(stub());
-    expect(doc.shapes[0].name).toBe('heart');
-    expect(doc.shapes[0].circles).toHaveLength(4);
+    expect(doc.shapes[0].name).toBe('circle');
+    expect(doc.shapes[0].circles).toHaveLength(1);
   });
 
   it('restores a saved document', () => {
     const s = stub();
-    const doc = newDocument(presetShape('spade'));
+    const doc = newDocument(suitShape('spade'));
     saveStored(s, doc);
     expect(s.m.has(STORAGE_KEY)).toBe(true);
     expect(loadStored(s).doc).toEqual(doc);
@@ -100,6 +135,6 @@ describe('localStorage', () => {
     s.setItem(STORAGE_KEY, '{"version":9}');
     const res = loadStored(s);
     expect(res.error).toBeTruthy();
-    expect(res.doc.shapes[0].name).toBe('heart');
+    expect(res.doc.shapes[0].name).toBe('circle');
   });
 });

@@ -1,5 +1,7 @@
 // High-level shape edits used by the UI. Pure: (shape, …) → shape. Symmetry-aware.
-import { newId, presetShape, type CircleDoc, type ShapeDoc } from './document';
+import type { Mode } from './band';
+import { newId, presetShape, toSigned, type CircleDoc, type ShapeDoc } from './document';
+import { autoOrder, insideBand, nearestSegment } from './interact';
 import type { PresetName } from './presets';
 import {
   clearPairs, deleteMirrored, editMirrored, insertMirrored, pairCircles, type CirclePatch,
@@ -11,10 +13,16 @@ export const DUPLICATE_OFFSET = 2;
 
 const withCircles = (s: ShapeDoc, circles: CircleDoc[]): ShapeDoc => ({ ...s, circles });
 
+export interface AddOptions {
+  r?: number;
+  mode?: Mode;
+}
+
+/** Inserts a circle after `afterId` (or at the end). Symmetry adds a mirrored twin. */
 export function addCircle(
-  s: ShapeDoc, width: number, at: { x: number; y: number }, afterId: string | null, r = DEFAULT_RADIUS,
+  s: ShapeDoc, width: number, at: { x: number; y: number }, afterId: string | null, opts: AddOptions = {},
 ): { shape: ShapeDoc; id: string } {
-  const base = { x: at.x, y: at.y, r, mode: 'convex' as const };
+  const base = { x: at.x, y: at.y, r: opts.r ?? DEFAULT_RADIUS, mode: opts.mode ?? ('convex' as Mode) };
   if (s.symmetry) {
     const res = insertMirrored(s.circles, afterId, base, width);
     return { shape: withCircles(s, res.circles), id: res.id };
@@ -24,6 +32,37 @@ export function addCircle(
   const circles = [...s.circles];
   circles.splice(idx < 0 ? circles.length : idx + 1, 0, { ...base, id });
   return { shape: withCircles(s, circles), id };
+}
+
+/** Default mode for a new circle at `p`: convex inside the fill, concave outside. */
+export function modeAt(s: ShapeDoc, p: { x: number; y: number }): Mode {
+  if (s.circles.length < 2) return 'convex';
+  return insideBand(p, toSigned(s.circles)) ? 'convex' : 'concave';
+}
+
+/** Adds a circle at `p`, inserted at the nearest band segment, with the mode from its position. */
+export function addCircleAt(s: ShapeDoc, width: number, p: { x: number; y: number }): { shape: ShapeDoc; id: string } {
+  const idx = nearestSegment(p, toSigned(s.circles));
+  const afterId = idx >= 0 ? s.circles[idx].id : null;
+  return addCircle(s, width, p, afterId, { mode: modeAt(s, p) });
+}
+
+/** "Add circle" with a selection: midway between the selected circle and the next one. */
+export function addCircleAfter(s: ShapeDoc, width: number, id: string): { shape: ShapeDoc; id: string } | null {
+  const i = s.circles.findIndex((c) => c.id === id);
+  if (i < 0) return null;
+  const c = s.circles[i];
+  const next = s.circles[(i + 1) % s.circles.length];
+  const p = next === c
+    ? { x: c.x + c.r + DEFAULT_RADIUS * 2, y: c.y }
+    : { x: (c.x + next.x) / 2, y: (c.y + next.y) / 2 };
+  return addCircle(s, width, p, id, { mode: modeAt(s, p) });
+}
+
+/** Reorders circles clockwise around their mean centre (first circle stays first). */
+export function autoOrderShape(s: ShapeDoc): ShapeDoc {
+  const circles = autoOrder(s.circles);
+  return circles.every((c, i) => c === s.circles[i]) ? s : withCircles(s, circles);
 }
 
 export function editCircle(s: ShapeDoc, width: number, id: string, patch: CirclePatch): ShapeDoc {
@@ -48,8 +87,7 @@ export function duplicateCircle(s: ShapeDoc, width: number, id: string): { shape
   const c = s.circles.find((o) => o.id === id);
   if (!c) return null;
   const at = { x: c.x + DUPLICATE_OFFSET, y: c.y + DUPLICATE_OFFSET };
-  const res = addCircle(s, width, at, id, c.r);
-  return { shape: editCircle(res.shape, width, res.id, { mode: c.mode }), id: res.id };
+  return addCircle(s, width, at, id, { r: c.r, mode: c.mode });
 }
 
 /** Moves the circle at index `from` so it ends up at index `to`. */

@@ -39,7 +39,7 @@ Double-clicking empty canvas SHALL add a circle (default radius 5) centred at th
 - **WHEN** the user double-clicks empty canvas at (20, 80)
 - **THEN** a circle centred at (20, 80) with radius 5 is added and selected
 
-#### Scenario: Add button with a selection
+#### Scenario: Add after selection
 - **WHEN** circle 2 of 4 is selected and the user presses "Add circle"
 - **THEN** a new circle is inserted at position 3, centred midway between circles 2 and 3, and selected
 
@@ -50,7 +50,7 @@ Double-clicking empty canvas SHALL add a circle (default radius 5) centred at th
 ### Requirement: Move and resize by dragging
 The editor SHALL move a circle when it is dragged and resize it when the selected circle is dragged near its rim (from any point on the rim). Which circle a drag grabs MUST follow the picking rule. The radius MUST stay at least 0.5 units.
 
-#### Scenario: Resize from any point on the rim
+#### Scenario: Resize via rim handle
 - **WHEN** a circle centred at (50, 50) with radius 10 is selected and the user drags from its rim point (50, 60) to (50, 62)
 - **THEN** its radius becomes 12
 
@@ -96,7 +96,9 @@ The editor SHALL show a side panel with the shape's name and fill in its header 
 - **WHEN** the panel is scrolled so that row 9 is hidden and the user selects circle 9 on the canvas
 - **THEN** row 9 scrolls into view and is highlighted
 
-### Requirement: Presets
+## ADDED Requirements
+
+### Requirement: Preset shapes
 The editor SHALL offer circle, cross, head and hand presets. Circle is a single convex circle; cross, head (a profile silhouette) and hand (a peace-sign hand) reproduce the matching icons in the twostu Design Library in Figma. Loading a preset MUST be undoable.
 
 #### Scenario: Load circle
@@ -111,7 +113,6 @@ The editor SHALL offer circle, cross, head and hand presets. Circle is a single 
 - **WHEN** any preset is loaded
 - **THEN** it has no invalid tangent pairs and no nested circles
 
-## ADDED Requirements
 
 ### Requirement: Insertion at the nearest band segment
 A circle added by double-click SHALL be inserted into the band loop between the two consecutive circles whose stretch of band (tangent line, or the nearer half of an arc) lies closest to the click point. With fewer than two circles, it MUST be appended.
@@ -177,3 +178,9 @@ The canvas SHALL show a one-line hint listing the shortcuts relevant to the curr
 #### Scenario: Hint follows selection
 - **WHEN** the user selects a circle
 - **THEN** the hint changes to list the arrow, Shift+arrow, C and Delete shortcuts
+
+## REMOVED Requirements
+
+### Requirement: Presets
+**Reason**: The card-suit presets (spade, heart, club, diamond) are replaced by circle, cross, head and hand.
+**Migration**: See "Preset shapes". Saved documents are unaffected; the suits remain available as test fixtures.

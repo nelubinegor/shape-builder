@@ -41,7 +41,7 @@ export function presetShape(name: PresetName): ShapeDoc {
   return { name, fill: '#000000', symmetry: false, circles: circlesFromTriples(presets[name]) };
 }
 
-export function newDocument(shape: ShapeDoc = presetShape('heart')): Doc {
+export function newDocument(shape: ShapeDoc = presetShape('circle')): Doc {
   return { version: 1, canvas: { width: 100, height: 100 }, shapes: [shape] };
 }
 
@@ -106,7 +106,7 @@ export function parseDocument(input: string | unknown): ParseResult {
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 
-/** Restores the stored document, or the heart preset if none (or invalid). */
+/** Restores the stored document, or the circle preset if none (or invalid). */
 export function loadStored(storage: StorageLike | undefined): { doc: Doc; error?: string } {
   let raw: string | null = null;
   try {

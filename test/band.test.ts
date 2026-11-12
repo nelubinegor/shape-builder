@@ -3,7 +3,7 @@ import {
   arcs, arcVertices, bandPath, bandPrimitives, cornerForm, distanceToPrimitives,
   filletPrimitives, samplePrimitives, tangents, validate, type Arc, type SCircle,
 } from '../src/band';
-import { presets } from '../src/presets';
+import { suits as presets } from './fixtures';
 
 const sc = (x: number, y: number, s: number): SCircle => ({ x, y, s });
 const fromTriples = (t: [number, number, number][]) => t.map(([x, y, s]) => sc(x, y, s));
@@ -157,4 +157,27 @@ describe('flattened and corner forms describe the same outline', () => {
       expect(worst).toBeLessThan(1e-6);
     });
   }
+});
+
+describe('single circle', () => {
+  const C = [sc(50, 50, 30)];
+  it('corner form has 3 vertices at distance 2R', () => {
+    const V = cornerForm(C);
+    expect(V).toHaveLength(3);
+    for (const v of V) {
+      expect(Math.hypot(v.x - 50, v.y - 50)).toBeCloseTo(60, 9);
+      expect(v.cornerRadius).toBe(30);
+    }
+  });
+  it('flattened and corner forms agree', () => {
+    const band = bandPrimitives(C);
+    const fillet = filletPrimitives(cornerForm(C));
+    let worst = 0;
+    for (const p of samplePrimitives(band, 64)) worst = Math.max(worst, distanceToPrimitives(p, fillet));
+    for (const p of samplePrimitives(fillet, 64)) worst = Math.max(worst, distanceToPrimitives(p, band));
+    expect(worst).toBeLessThan(1e-6);
+  });
+  it('flattened path is two half arcs', () => {
+    expect(bandPath(C).replace(/[^MAZ]/g, '')).toBe('MAAZ');
+  });
 });

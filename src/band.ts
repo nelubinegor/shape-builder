@@ -202,8 +202,19 @@ export function arcVertices(a: Arc): CornerVertex[] {
 
 /** Straight-edge polygon with a corner radius per vertex; same outline as bandPath. */
 export function cornerForm(C: SCircle[]): CornerVertex[] {
-  if (C.length < 2) return [];
+  if (C.length === 0) return [];
+  if (C.length === 1) return arcVertices(fullCircleArc(C[0]));
   return arcs(C).flatMap(arcVertices);
+}
+
+/** A lone circle as one full clockwise arc starting at its top. */
+function fullCircleArc(c: SCircle): Arc {
+  const R = Math.abs(c.s);
+  const top = { x: c.x, y: c.y - R };
+  return {
+    index: 0, cx: c.x, cy: c.y, R, sg: 1, start: top, end: top,
+    ain: -Math.PI / 2, sweep: TAU, largeArc: 1, sweepFlag: 1,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -215,6 +226,15 @@ export type Prim =
 
 /** Primitives of the flattened band outline. */
 export function bandPrimitives(C: SCircle[]): Prim[] {
+  if (C.length === 0) return [];
+  if (C.length === 1) {
+    const { x, y, s: sr } = C[0];
+    const R = Math.abs(sr);
+    return [
+      { kind: 'arc', cx: x, cy: y, R, a0: -Math.PI / 2, sweep: Math.PI, dir: 1 },
+      { kind: 'arc', cx: x, cy: y, R, a0: Math.PI / 2, sweep: Math.PI, dir: 1 },
+    ];
+  }
   const T = tangents(C);
   const A = arcs(C, T);
   const out: Prim[] = [];

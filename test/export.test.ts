@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cornerForm } from '../src/band';
-import { newDocument, presetShape, toSigned } from '../src/document';
+import { newDocument, toSigned } from '../src/document';
+import { suitShape } from './fixtures';
 import { buildSvg, exportFileName, vectorNetwork } from '../src/export';
 
 const opts = { fill: '#000000', overlay: false, scale: 1 };
@@ -9,7 +10,7 @@ const attr = (el: string, name: string): string | undefined => el.match(new RegE
 
 describe('flattened SVG', () => {
   it('heart at scale 1', () => {
-    const svg = buildSvg(newDocument(presetShape('heart')), 'flattened', opts);
+    const svg = buildSvg(newDocument(suitShape('heart')), 'flattened', opts);
     expect(svg).toMatch(/^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/);
     expect(svg).toContain('viewBox="0 0 100 100"');
     const paths = shapePaths(svg);
@@ -20,7 +21,7 @@ describe('flattened SVG', () => {
   });
 
   it('scale 4 multiplies everything', () => {
-    const doc = newDocument(presetShape('heart'));
+    const doc = newDocument(suitShape('heart'));
     const one = attr(shapePaths(buildSvg(doc, 'flattened', opts))[0], 'd')!;
     const four = buildSvg(doc, 'flattened', { ...opts, scale: 4 });
     expect(four).toContain('viewBox="0 0 400 400"');
@@ -40,7 +41,7 @@ describe('flattened SVG', () => {
   });
 
   it('overlay is off by default and added when asked', () => {
-    const doc = newDocument(presetShape('spade'));
+    const doc = newDocument(suitShape('spade'));
     expect(buildSvg(doc, 'flattened', opts)).not.toContain('construction');
     const withOverlay = buildSvg(doc, 'flattened', { ...opts, overlay: true });
     expect(withOverlay).toContain('id="construction"');
@@ -55,7 +56,7 @@ describe('flattened SVG', () => {
 
 describe('rounded-corner SVG', () => {
   it('straight segments with one radius per vertex', () => {
-    const doc = newDocument(presetShape('club'));
+    const doc = newDocument(suitShape('club'));
     const n = cornerForm(toSigned(doc.shapes[0].circles)).length;
     const svg = buildSvg(doc, 'rounded', opts);
     const p = shapePaths(svg)[0];
@@ -66,7 +67,7 @@ describe('rounded-corner SVG', () => {
   });
 
   it('scales radii', () => {
-    const doc = newDocument(presetShape('heart'));
+    const doc = newDocument(suitShape('heart'));
     const r1 = attr(shapePaths(buildSvg(doc, 'rounded', opts))[0], 'data-corner-radii')!.split(',').map(Number);
     const r2 = attr(shapePaths(buildSvg(doc, 'rounded', { ...opts, scale: 2 }))[0], 'data-corner-radii')!
       .split(',').map(Number);
@@ -76,7 +77,7 @@ describe('rounded-corner SVG', () => {
 
 describe('Figma vector network', () => {
   it('closed loop of N vertices', () => {
-    const shape = presetShape('spade');
+    const shape = suitShape('spade');
     const n = cornerForm(toSigned(shape.circles)).length;
     const vn = vectorNetwork(shape);
     expect(vn.vertices).toHaveLength(n);
@@ -89,6 +90,6 @@ describe('Figma vector network', () => {
 
 describe('file name', () => {
   it('is based on shape name and format', () => {
-    expect(exportFileName({ ...presetShape('heart'), name: 'Big Heart!' }, 'rounded')).toBe('big-heart-rounded.svg');
+    expect(exportFileName({ ...suitShape('heart'), name: 'Big Heart!' }, 'rounded')).toBe('big-heart-rounded.svg');
   });
 });

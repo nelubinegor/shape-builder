@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { newDocument, presetShape, type ShapeDoc } from '../src/document';
+import { newDocument, type ShapeDoc } from '../src/document';
+import { suitShape } from './fixtures';
 import {
   addCircle, deleteCircle, duplicateCircle, editCircle, loadPreset, moveCircle, setSymmetry, toggleMode,
 } from '../src/ops';
@@ -57,19 +58,19 @@ describe('store undo/redo', () => {
 
 describe('ops', () => {
   it('adds after the selected circle', () => {
-    const s = presetShape('heart');
+    const s = suitShape('heart');
     const { shape, id } = addCircle(s, W, { x: 10, y: 10 }, s.circles[1].id);
     expect(shape.circles[2].id).toBe(id);
     expect(shape.circles).toHaveLength(5);
   });
 
   it('clamps radius', () => {
-    const s = presetShape('heart');
+    const s = suitShape('heart');
     expect(editCircle(s, W, s.circles[0].id, { r: 0.1 }).circles[0].r).toBe(0.5);
   });
 
   it('duplicates with offset after the original', () => {
-    const s = presetShape('heart');
+    const s = suitShape('heart');
     const res = duplicateCircle(s, W, s.circles[3].id)!;
     const d = res.shape.circles[4];
     expect(d.id).toBe(res.id);
@@ -77,19 +78,19 @@ describe('ops', () => {
   });
 
   it('reorders', () => {
-    const s = presetShape('heart');
+    const s = suitShape('heart');
     const m = moveCircle(s, 0, 2);
     expect(m.circles.map((c) => c.id)).toEqual([s.circles[1].id, s.circles[2].id, s.circles[0].id, s.circles[3].id]);
   });
 
   it('toggles mode', () => {
-    const s = presetShape('heart');
+    const s = suitShape('heart');
     expect(toggleMode(s, W, s.circles[0].id).circles[0].mode).toBe('concave');
   });
 });
 
 describe('symmetry', () => {
-  const sym = () => setSymmetry(presetShape('heart'), W, true);
+  const sym = () => setSymmetry(suitShape('heart'), W, true);
 
   it('pairs the heart lobes and leaves axis circles alone', () => {
     const s = sym();
@@ -158,9 +159,9 @@ describe('symmetry', () => {
 
   it('preset keeps symmetry and fill', () => {
     const s = { ...sym(), fill: '#ff0000' };
-    const p = loadPreset(s, W, 'spade');
+    const p = loadPreset(s, W, 'cross');
     expect(p.symmetry).toBe(true);
     expect(p.fill).toBe('#ff0000');
-    expect(p.circles.filter((c) => c.twinId)).toHaveLength(6);
+    expect(p.circles.filter((c) => c.twinId)).toHaveLength(12);
   });
 });
