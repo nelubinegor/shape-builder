@@ -13,11 +13,15 @@ A document SHALL be JSON of the form `{ "version": 1, "canvas": { "width", "heig
 - **THEN** every circle's id, position, radius, mode and order, plus the shape's name, fill and symmetry, are unchanged
 
 ### Requirement: Autosave to localStorage
-The editor SHALL save the current document to localStorage after every change and restore it on load. If nothing is stored, it MUST start with the heart preset.
+The editor SHALL save the current document to localStorage after every change and restore it on load. If nothing is stored, it MUST start with the circle preset.
 
 #### Scenario: Reload keeps work
 - **WHEN** the user edits a shape and reloads the page
 - **THEN** the same shape is shown
+
+#### Scenario: First visit
+- **WHEN** the user opens the editor with nothing stored
+- **THEN** the shape is a single convex circle centred on the artboard
 
 ### Requirement: File download and upload
 The user SHALL be able to download the document as a `.json` file and open a `.json` file. Opening a file MUST replace the current shape as one undoable step.
