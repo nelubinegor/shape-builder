@@ -27,6 +27,10 @@ export interface Doc {
 
 export const STORAGE_KEY = 'shape-builder.document';
 
+/** Allowed canvas side length in units. */
+export const MIN_CANVAS = 1;
+export const MAX_CANVAS = 4096;
+
 let idCounter = 0;
 export function newId(): string {
   idCounter += 1;
@@ -70,8 +74,12 @@ export function parseDocument(input: string | unknown): ParseResult {
   if (!isObj(data)) return { ok: false, error: 'The document must be a JSON object.' };
   if (data.version !== 1) return { ok: false, error: `Unsupported document version: ${String(data.version)}.` };
   const canvas = data.canvas;
-  if (!isObj(canvas) || !isNum(canvas.width) || !isNum(canvas.height) || canvas.width <= 0 || canvas.height <= 0) {
+  if (!isObj(canvas) || !isNum(canvas.width) || !isNum(canvas.height)) {
     return { ok: false, error: 'The document has no valid canvas size.' };
+  }
+  const inRange = (v: number) => v >= MIN_CANVAS && v <= MAX_CANVAS;
+  if (!inRange(canvas.width) || !inRange(canvas.height)) {
+    return { ok: false, error: `The canvas size must be between ${MIN_CANVAS} and ${MAX_CANVAS} units.` };
   }
   if (!Array.isArray(data.shapes) || data.shapes.length === 0) {
     return { ok: false, error: 'The document contains no shapes.' };

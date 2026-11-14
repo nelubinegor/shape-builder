@@ -10,7 +10,7 @@ const byXY = (cs: CircleDoc[], x: number, y: number) => cs.find((c) => c.x === x
 describe('pick', () => {
   const club = suitShape('club').circles;
   const tol = 1; // ~8 px at ~7 px/unit
-  const maxR = 20; // ~150 px
+  const maxR = 50; // half the 100-unit canvas
 
   it('grabs a small concave circle from anywhere inside it', () => {
     const notch = byXY(club, 78, 27); // r 7, overlapped by the r 19 lobes

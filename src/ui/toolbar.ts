@@ -8,12 +8,13 @@ export interface ToolbarApi {
   render(): void;
 }
 
-type Toggle = 'overlay' | 'corners' | 'grid' | 'snap';
+type Toggle = 'overlay' | 'corners' | 'pixelGrid' | 'iconGrid' | 'snap';
 
 const TOGGLES: { key: Toggle; label: string; title: string }[] = [
   { key: 'overlay', label: 'Construction', title: 'Show circles and tangent points' },
   { key: 'corners', label: 'Corners', title: 'Preview the corner-radius form' },
-  { key: 'grid', label: 'Grid', title: 'Show grid' },
+  { key: 'pixelGrid', label: 'Pixel grid', title: 'Show the unit grid' },
+  { key: 'iconGrid', label: 'Icon grid', title: 'Show the twostu icon keyline grid' },
   { key: 'snap', label: 'Snap', title: 'Snap drags to the grid' },
 ];
 
@@ -49,7 +50,7 @@ export function mountToolbar(host: HTMLElement, store: Store): ToolbarApi {
   preset.addEventListener('change', () => {
     const name = preset.value as PresetName;
     if (!name) return;
-    store.updateShape((s) => loadPreset(s, store.width, name));
+    store.updateShape((s) => loadPreset(s, store.doc.canvas, name));
     store.select(null);
     store.notify(`Loaded ${name}`);
     preset.value = '';

@@ -21,7 +21,7 @@ Not included: moving, scaling or rotating the reference image; saving the refere
 <!-- None -->
 
 ### Modified Capabilities
-- `shape-editor`: adds canvas size controls, the reference image and the icon grid; the Canvas requirement now describes two independent grids; presets are fitted to the canvas size.
+- `shape-editor`: picking's size limit for grabbing a circle from inside becomes relative to the canvas instead of the screen, so it works at any zoom; adds canvas size controls, the reference image and the icon grid; the Canvas requirement now describes two independent grids; presets are fitted to the canvas size.
 - `shape-document`: adds valid canvas size bounds (1–4096 units per side) to the saved document.
 
 ## Impact

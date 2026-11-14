@@ -159,7 +159,7 @@ describe('symmetry', () => {
 
   it('preset keeps symmetry and fill', () => {
     const s = { ...sym(), fill: '#ff0000' };
-    const p = loadPreset(s, W, 'cross');
+    const p = loadPreset(s, { width: W, height: W }, 'cross');
     expect(p.symmetry).toBe(true);
     expect(p.fill).toBe('#ff0000');
     expect(p.circles.filter((c) => c.twinId)).toHaveLength(12);

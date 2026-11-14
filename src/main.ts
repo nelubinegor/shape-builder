@@ -1,6 +1,7 @@
 import './style.css';
 import { loadStored, saveStored } from './document';
-import { Store } from './store';
+import { addReference, isImage } from './reference';
+import { fitView, Store } from './store';
 import { mountCanvas } from './ui/canvas';
 import { mountExportPanel } from './ui/exportPanel';
 import { mountPanel } from './ui/panel';
@@ -61,8 +62,17 @@ const schedule = () => {
   if (!frame) frame = requestAnimationFrame(renderAll);
 };
 
+let lastCanvas = `${store.doc.canvas.width}x${store.doc.canvas.height}`;
 store.subscribe((s, kind) => {
-  if (kind === 'doc') saveStored(storage, s.doc);
+  if (kind === 'doc') {
+    saveStored(storage, s.doc);
+    const size = `${s.doc.canvas.width}x${s.doc.canvas.height}`;
+    if (size !== lastCanvas) {
+      // Resize, undo/redo of a resize, or opening a file: show the whole new artboard.
+      lastCanvas = size;
+      s.setUI({ view: fitView(s.doc.canvas.width, s.doc.canvas.height) });
+    }
+  }
   schedule();
 });
 
@@ -96,6 +106,16 @@ window.addEventListener('keyup', (e) => {
   if (e.key === ' ' || e.code === 'Space') canvas.setSpace(false);
 });
 window.addEventListener('blur', () => canvas.setSpace(false));
+
+// Paste an image anywhere (outside text fields) to use it as the reference.
+window.addEventListener('paste', (e) => {
+  if (isTextField(e.target)) return;
+  const item = [...(e.clipboardData?.items ?? [])].find((i) => i.kind === 'file' && isImage(i));
+  const file = item?.getAsFile();
+  if (!file) return;
+  e.preventDefault();
+  void addReference(store, file);
+});
 
 renderAll();
 if (restored.error) store.notify(restored.error, 'error');

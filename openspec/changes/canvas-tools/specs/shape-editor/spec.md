@@ -36,6 +36,21 @@ The editor SHALL offer circle, cross, head and hand presets. Circle is a single 
 - **WHEN** the canvas is 24×24 and the user picks the circle preset
 - **THEN** the shape contains one circle centred at (12, 12) with radius 7.2
 
+### Requirement: Picking
+The editor SHALL pick the circle under the pointer in this order, within a tolerance of 8 screen pixels: the selected circle's rim (resize); the nearest centre (move); the nearest rim (move); otherwise the smallest circle containing the pointer whose radius is at most half the canvas's larger side (move). If none match, the pointer is over empty canvas.
+
+#### Scenario: Small concave circle is easy to grab
+- **WHEN** the club preset is loaded and the user presses anywhere inside the concave circle at (78, 27)
+- **THEN** that concave circle is selected, not the neighbouring convex lobe
+
+#### Scenario: Huge circles do not swallow clicks
+- **WHEN** the diamond preset is loaded and the user clicks empty paper outside the shape, far from any rim or centre
+- **THEN** no circle is selected
+
+#### Scenario: Picking works at any zoom
+- **WHEN** the canvas is 24×24 with the circle preset, zoomed to fit, and the user clicks inside the circle away from its rim and centre
+- **THEN** the circle is selected
+
 ## ADDED Requirements
 
 ### Requirement: Canvas size

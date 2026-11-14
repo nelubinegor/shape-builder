@@ -2,8 +2,10 @@
 import { validate } from '../band';
 import { toSigned } from '../document';
 import {
-  addCircleAfter, addCircleAt, autoOrderShape, deleteCircle, duplicateCircle, editCircle, moveCircle, toggleMode,
+  addCircleAfter, addCircleAt, autoOrderShape, clampCanvas, deleteCircle, duplicateCircle, editCircle, moveCircle,
+  resizeCanvas, toggleMode,
 } from '../ops';
+import { addReference, setReference } from '../reference';
 import type { Store } from '../store';
 import { isAxisCircle } from '../symmetry';
 import { circleIssues } from './canvas';
@@ -24,6 +26,22 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
         <label class="sr-only" for="shape-fill">Fill colour</label>
         <input id="shape-fill" type="color" title="Fill colour">
       </div>
+      <div class="canvas-size" role="group" aria-label="Canvas size">
+        <span class="muted">Canvas</span>
+        <label class="field inline"><span>W</span><input id="canvas-w" type="number" min="1" max="4096" step="any" aria-label="Canvas width"></label>
+        <span class="muted" aria-hidden="true">×</span>
+        <label class="field inline"><span>H</span><input id="canvas-h" type="number" min="1" max="4096" step="any" aria-label="Canvas height"></label>
+        <button class="toggle icon" id="canvas-lock" aria-pressed="true" title="Keep width and height equal" aria-label="Lock width and height">⛓</button>
+      </div>
+      <div class="reference-row">
+        <button id="reference-pick" title="Use an image as an onion-skin reference (or paste / drop one)">Reference…</button>
+        <div class="reference-controls" id="reference-controls" hidden>
+          <label class="field inline grow"><span class="sr-only">Reference opacity</span><input id="reference-opacity" type="range" min="0" max="100" step="1" aria-label="Reference opacity"></label>
+          <span class="muted small-num" id="reference-opacity-label"></span>
+          <button id="reference-toggle">Hide</button>
+          <button id="reference-remove">Remove</button>
+        </div>
+      </div>
       <div class="list-head">
         <h2 id="circles-h">Circles <span class="muted" id="circle-count"></span></h2>
         <div class="button-row">
@@ -40,6 +58,57 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
   const list = host.querySelector<HTMLOListElement>('#circle-list')!;
   const count = host.querySelector<HTMLSpanElement>('#circle-count')!;
   let lastSelected: string | null = null;
+  const canvasW = host.querySelector<HTMLInputElement>('#canvas-w')!;
+  const canvasH = host.querySelector<HTMLInputElement>('#canvas-h')!;
+  const lock = host.querySelector<HTMLButtonElement>('#canvas-lock')!;
+  const refControls = host.querySelector<HTMLDivElement>('#reference-controls')!;
+  const refOpacity = host.querySelector<HTMLInputElement>('#reference-opacity')!;
+  const refOpacityLabel = host.querySelector<HTMLSpanElement>('#reference-opacity-label')!;
+  const refToggle = host.querySelector<HTMLButtonElement>('#reference-toggle')!;
+  let locked = store.doc.canvas.width === store.doc.canvas.height;
+  lock.setAttribute('aria-pressed', String(locked));
+
+  // Canvas size: commit on Enter/blur (each resize rescales the shape).
+  const commitSize = (changed: 'w' | 'h') => {
+    const { width, height } = store.doc.canvas;
+    const w = clampCanvas(Number(canvasW.value));
+    const h = clampCanvas(Number(canvasH.value));
+    const next = locked ? (changed === 'w' ? [w, w] : [h, h]) : [w, h];
+    const doc = resizeCanvas(store.doc, next[0], next[1]);
+    canvasW.value = String(next[0]);
+    canvasH.value = String(next[1]);
+    if (doc === store.doc || (next[0] === width && next[1] === height)) return;
+    store.setDoc(doc); // main.ts refits the view whenever the canvas size changes
+  };
+  for (const [el, key] of [[canvasW, 'w'], [canvasH, 'h']] as const) {
+    el.addEventListener('change', () => commitSize(key));
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') el.blur();
+      if (e.key === 'Escape') {
+        el.value = String(key === 'w' ? store.doc.canvas.width : store.doc.canvas.height);
+        el.blur();
+      }
+    });
+  }
+  lock.addEventListener('click', () => {
+    locked = !locked;
+    lock.setAttribute('aria-pressed', String(locked));
+  });
+
+  // Reference image controls.
+  host.querySelector('#reference-pick')!.addEventListener('click', async () => {
+    const file = await pickFile('image/*');
+    if (file) await addReference(store, file);
+  });
+  refOpacity.addEventListener('input', () => {
+    const r = store.ui.reference;
+    if (r) store.setUI({ reference: { ...r, opacity: Number(refOpacity.value) / 100 } });
+  });
+  refToggle.addEventListener('click', () => {
+    const r = store.ui.reference;
+    if (r) store.setUI({ reference: { ...r, visible: !r.visible } });
+  });
+  host.querySelector('#reference-remove')!.addEventListener('click', () => setReference(store, null));
 
   nameInput.addEventListener('focus', () => store.begin());
   nameInput.addEventListener('input', () => store.updateShape((s) => ({ ...s, name: nameInput.value })));
@@ -79,6 +148,17 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
   function render() {
     const shape = store.shape;
     const W = store.width;
+    const { width: cw, height: ch } = store.doc.canvas;
+    if (document.activeElement !== canvasW) canvasW.value = String(cw);
+    if (document.activeElement !== canvasH) canvasH.value = String(ch);
+    const ref = store.ui.reference;
+    refControls.hidden = !ref;
+    if (ref) {
+      if (document.activeElement !== refOpacity) refOpacity.value = String(Math.round(ref.opacity * 100));
+      refOpacityLabel.textContent = `${Math.round(ref.opacity * 100)}%`;
+      refToggle.textContent = ref.visible ? 'Hide' : 'Show';
+      refToggle.setAttribute('aria-pressed', String(!ref.visible));
+    }
     if (document.activeElement !== nameInput) nameInput.value = shape.name;
     if (document.activeElement !== fillInput) fillInput.value = toHex(shape.fill);
     count.textContent = `(${shape.circles.length})`;
@@ -264,6 +344,18 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
   });
 
   return { render };
+}
+
+/** Opens a file picker and resolves with the chosen file (null if cancelled). */
+function pickFile(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.addEventListener('change', () => resolve(input.files?.[0] ?? null));
+    input.addEventListener('cancel', () => resolve(null));
+    input.click();
+  });
 }
 
 function toHex(color: string): string {

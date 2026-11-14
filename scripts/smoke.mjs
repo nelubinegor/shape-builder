@@ -304,6 +304,128 @@ try {
   await page.waitForSelector('.toast.error');
   check('malformed file rejected with a message', (await state()).circles.length === 12);
 
+  // ---- canvas-tools: canvas size ----
+  await loadPreset('circle');
+  const setSize = async (sel, v) => {
+    await page.fill(sel, String(v));
+    await page.press(sel, 'Enter');
+    await settle();
+  };
+  await setSize('#canvas-w', 24);
+  s = await state();
+  let doc = await page.evaluate(() => window.shapeBuilder.doc.canvas);
+  check('resize 100→24 with lock scales the shape', doc.width === 24 && doc.height === 24 &&
+    s.circles[0].x === 12 && s.circles[0].y === 12 && s.circles[0].r === 7.2, JSON.stringify(s.circles[0]));
+  check('view refits to the new canvas', Math.abs(s.ui.view.w - 24 * 1.16) < 1e-9);
+  await page.keyboard.press('Control+z');
+  await settle();
+  doc = await page.evaluate(() => window.shapeBuilder.doc.canvas);
+  s = await state();
+  check('undo restores size and circles', doc.width === 100 && s.circles[0].r === 30 && Math.abs(s.ui.view.w - 116) < 1e-9);
+  await setSize('#canvas-w', 24);
+  await loadPreset('circle');
+  s = await state();
+  check('preset fits a 24×24 canvas', s.circles[0].x === 12 && s.circles[0].r === 7.2);
+  await click('#canvas-lock');
+  await setSize('#canvas-w', 48);
+  doc = await page.evaluate(() => window.shapeBuilder.doc.canvas);
+  s = await state();
+  check('lock off: width only, shape centred', doc.width === 48 && doc.height === 24 && s.circles[0].x === 24 && s.circles[0].r === 7.2);
+  await click('#canvas-lock');
+  await setSize('#canvas-w', 24);
+  await setSize('#canvas-w', 0);
+  doc = await page.evaluate(() => window.shapeBuilder.doc.canvas);
+  check('size is clamped to 1', doc.width === 1);
+  await page.keyboard.press('Control+z');
+  await settle();
+
+  // ---- grids ----
+  await loadPreset('circle');
+  check('pixel grid on by default', (await page.locator('.canvas .grid-minor').count()) === 1);
+  await click('[data-toggle="iconGrid"]');
+  const ig = page.locator('.canvas .icon-grid');
+  check('icon grid draws the Figma keylines', (await ig.locator('circle').count()) === 2 &&
+    (await ig.locator('rect').count()) === 3 && (await ig.locator('line').count()) === 12);
+  check('both grids shown', (await page.locator('.canvas .grid-minor').count()) === 1);
+  const outer = await ig.locator('circle').first().evaluate((el) => [el.getAttribute('cx'), el.getAttribute('r')]);
+  check('icon grid scaled to a 24 canvas', Number(outer[0]) === 12 && Number(outer[1]) === 10);
+  await click('[data-toggle="pixelGrid"]');
+  check('icon grid only', (await page.locator('.canvas .grid-minor').count()) === 0 && (await ig.count()) === 1);
+  await clickAt(12, 12 - 5); // on the r5 keyline, inside the circle
+  check('clicks pass through the icon grid', (await state()).selectedId !== null);
+  await click('[data-toggle="iconGrid"]');
+  check('no grids', (await page.locator('.canvas .grid-minor, .canvas .icon-grid').count()) === 0);
+  await clickAt(1, 1);
+  const before0 = (await state()).circles[0];
+  await dragDoc([12, 12], [14.37, 9.8]);
+  const after0 = (await state()).circles[0];
+  check('snapping works with grids hidden', after0.x === 14 && after0.y === 10, `${after0.x},${after0.y}`);
+  await page.keyboard.press('Control+z');
+  await click('[data-toggle="pixelGrid"]');
+  void before0;
+
+  // ---- reference image ----
+  const pngB64 = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 200; c.height = 100;
+    const g = c.getContext('2d');
+    g.fillStyle = '#e33'; g.fillRect(0, 0, 200, 100);
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  await page.evaluate(async (b64) => {
+    const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([bytes], { type: 'image/png' }) })]);
+  }, pngB64);
+  await page.locator('.canvas').hover();
+  await page.keyboard.press('Control+v');
+  await page.waitForSelector('.canvas image.reference');
+  await settle();
+  const img = await page.locator('.canvas image.reference').evaluate((el) =>
+    ['x', 'y', 'width', 'height', 'opacity'].map((a) => Number(el.getAttribute(a))));
+  check('pasted image is contain-fitted and centred', img[0] === 0 && img[1] === 6 && img[2] === 24 && img[3] === 12, img.join(','));
+  check('reference opacity defaults to 50%', img[4] === 0.5);
+  check('shape turns see-through', (await page.getAttribute('.canvas path.shape', 'opacity')) === '0.6');
+  await page.locator('#reference-opacity').evaluate((el) => { el.value = '20'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await settle();
+  check('opacity slider changes the image', (await page.getAttribute('.canvas image.reference', 'opacity')) === '0.2');
+  await click('#reference-toggle');
+  check('hide removes the image and restores the shape', (await page.locator('.canvas image.reference').count()) === 0 &&
+    (await page.getAttribute('.canvas path.shape', 'opacity')) === null);
+  await click('#reference-toggle');
+  await click('#copy-svg');
+  check('reference not exported', !(await page.evaluate(() => navigator.clipboard.readText())).includes('<image'));
+  const [refSave] = await Promise.all([page.waitForEvent('download'), page.click('#save')]);
+  const fs = await import('node:fs');
+  check('reference not saved', !fs.readFileSync(await refSave.path(), 'utf8').includes('blob:'));
+  await click('#reference-remove');
+  check('remove clears the reference', (await page.locator('.canvas image.reference').count()) === 0 &&
+    await page.locator('#reference-controls').isHidden());
+  await page.evaluate(() => navigator.clipboard.writeText('just text'));
+  await page.locator('.canvas').hover();
+  await page.keyboard.press('Control+v');
+  await settle();
+  check('pasting text does nothing', (await state()).ui.reference === null);
+  await page.evaluate((b64) => {
+    const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+    const dt = new DataTransfer();
+    dt.items.add(new File([bytes], 'ref.png', { type: 'image/png' }));
+    const stage = document.getElementById('stage');
+    stage.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    stage.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  }, pngB64);
+  await page.waitForSelector('.canvas image.reference');
+  check('dropping an image sets the reference', true);
+  await click('#reference-remove');
+  const [refChooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#reference-pick')]);
+  await refChooser.setFiles({ name: 'ref.png', mimeType: 'image/png', buffer: Buffer.from(pngB64, 'base64') });
+  await page.waitForSelector('.canvas image.reference');
+  check('picking a file sets the reference', true);
+  await shot('reference');
+  await page.reload();
+  await page.waitForSelector('.canvas path.shape');
+  check('reference is gone after reload', (await page.locator('.canvas image.reference').count()) === 0);
+  check('canvas size persists across reload', (await page.evaluate(() => window.shapeBuilder.doc.canvas.width)) === 24);
+
   await shot('final');
   check('no console errors', errors.length === 0, errors.join(' | '));
 } catch (err) {

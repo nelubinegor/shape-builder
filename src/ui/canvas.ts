@@ -1,13 +1,16 @@
 // SVG canvas: rendering, picking, pointer/wheel interaction, zoom controls and hint line.
 import { bandPath, cornerForm, tangents, validate, type Pt, type Validation } from '../band';
 import { toSigned, type CircleDoc } from '../document';
+import { iconGridPrimitives } from '../iconGrid';
 import { pick, type PickResult } from '../interact';
 import { addCircleAt, deleteCircle, editCircle, toggleMode } from '../ops';
+import { addReference, fitReference, isImage, ONION_SHAPE_OPACITY } from '../reference';
 import { fitView, type Store, type View } from '../store';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const PICK_TOLERANCE_PX = 8;
-const MAX_CONTAIN_RADIUS_PX = 150;
+/** Circles larger than this fraction of the canvas's larger side are only grabbed by rim or centre. */
+const MAX_CONTAIN_RADIUS_FRACTION = 0.5;
 const MIN_VIEW = 5;
 const MAX_VIEW = 2000;
 
@@ -91,7 +94,9 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
 
   const pickAt = (p: Pt) => {
     const u = unitsPerPx();
-    return pick(p, store.shape.circles, store.ui.selectedId, PICK_TOLERANCE_PX * u, MAX_CONTAIN_RADIUS_PX * u);
+    const { width, height } = store.doc.canvas;
+    const maxR = Math.max(width, height) * MAX_CONTAIN_RADIUS_FRACTION;
+    return pick(p, store.shape.circles, store.ui.selectedId, PICK_TOLERANCE_PX * u, maxR);
   };
 
   const resizeCursor = (c: CircleDoc, p: Pt) => {
@@ -116,7 +121,7 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
   }
 
   function render() {
-    const { view, overlay, corners, grid, gridStep, selectedId } = store.ui;
+    const { view, overlay, corners, pixelGrid, iconGrid, reference, gridStep, selectedId } = store.ui;
     const { width: W, height: H } = store.doc.canvas;
     const shape = store.shape;
     svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`);
@@ -126,7 +131,7 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
     const parts: string[] = [];
 
     parts.push(`<rect class="paper" x="0" y="0" width="${W}" height="${H}"/>`);
-    if (grid) {
+    if (pixelGrid) {
       let step = gridStep > 0 ? gridStep : 1;
       while (step / u < 6) step *= 5;
       const minor: string[] = [];
@@ -140,7 +145,26 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
       parts.push(`<path class="axis" stroke-width="${u}" stroke-dasharray="${4 * u} ${4 * u}" d="M${W / 2} ${view.y}V${view.y + view.h}"/>`);
     }
 
-    if (C.length > 0) parts.push(`<path class="shape" fill="${escAttr(shape.fill)}" d="${bandPath(C)}"/>`);
+    const onion = !!reference?.visible;
+    if (onion && reference) {
+      const r = fitReference(reference.naturalWidth, reference.naturalHeight, W, H);
+      parts.push(
+        `<image class="reference" href="${escAttr(reference.url)}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" preserveAspectRatio="none" opacity="${reference.opacity}"/>`,
+      );
+    }
+
+    if (C.length > 0) {
+      parts.push(`<path class="shape" fill="${escAttr(shape.fill)}"${onion ? ` opacity="${ONION_SHAPE_OPACITY}"` : ''} d="${bandPath(C)}"/>`);
+    }
+
+    if (iconGrid) {
+      const g = iconGridPrimitives(W, H).map((p) => {
+        if (p.kind === 'circle') return `<circle cx="${p.cx}" cy="${p.cy}" r="${p.r}"/>`;
+        if (p.kind === 'rect') return `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="${p.rx}"/>`;
+        return `<line x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}"/>`;
+      });
+      parts.push(`<g class="icon-grid" stroke-width="${u}">${g.join('')}</g>`);
+    }
 
     if (corners && C.length > 0) {
       const V = cornerForm(C);
@@ -282,6 +306,22 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
     const res = addCircleAt(store.shape, store.width, at);
     store.updateShape(() => res.shape);
     store.select(res.id);
+  });
+
+  // ---- Drop a reference image ----
+  host.addEventListener('dragover', (e) => {
+    if ([...(e.dataTransfer?.items ?? [])].some((i) => i.kind === 'file' && isImage(i))) {
+      e.preventDefault();
+      host.classList.add('drop-target');
+    }
+  });
+  host.addEventListener('dragleave', () => host.classList.remove('drop-target'));
+  host.addEventListener('drop', (e) => {
+    host.classList.remove('drop-target');
+    const file = [...(e.dataTransfer?.files ?? [])].find(isImage);
+    if (!file) return;
+    e.preventDefault();
+    void addReference(store, file);
   });
 
   // ---- Zoom and wheel ----

@@ -1,6 +1,8 @@
 // High-level shape edits used by the UI. Pure: (shape, …) → shape. Symmetry-aware.
 import type { Mode } from './band';
-import { newId, presetShape, toSigned, type CircleDoc, type ShapeDoc } from './document';
+import {
+  MAX_CANVAS, MIN_CANVAS, newId, presetShape, toSigned, type CircleDoc, type Doc, type ShapeDoc,
+} from './document';
 import { autoOrder, insideBand, nearestSegment } from './interact';
 import type { PresetName } from './presets';
 import {
@@ -104,8 +106,50 @@ export function setSymmetry(s: ShapeDoc, width: number, on: boolean): ShapeDoc {
   return { ...s, symmetry: on, circles: on ? pairCircles(s.circles, width) : clearPairs(s.circles) };
 }
 
-export function loadPreset(current: ShapeDoc, width: number, name: PresetName): ShapeDoc {
+export interface CanvasSize {
+  width: number;
+  height: number;
+}
+
+/** Presets are authored on a 100×100 artboard. */
+export const PRESET_SIZE = 100;
+
+/** Scales circles uniformly by `s` and offsets them by (dx, dy). */
+function transformCircles(circles: CircleDoc[], s: number, dx: number, dy: number): CircleDoc[] {
+  const round = (v: number) => Math.round(v * 1e6) / 1e6;
+  return circles.map((c) => ({ ...c, x: round(c.x * s + dx), y: round(c.y * s + dy), r: round(c.r * s) }));
+}
+
+export function clampCanvas(v: number): number {
+  if (!Number.isFinite(v)) return MIN_CANVAS;
+  return Math.min(MAX_CANVAS, Math.max(MIN_CANVAS, Math.round(v * 100) / 100));
+}
+
+/**
+ * Resizes the canvas, scaling every circle uniformly by min(w/W, h/H) and
+ * centring the result, so the drawing keeps its proportions. Sizes are clamped.
+ */
+export function resizeCanvas(doc: Doc, width: number, height: number): Doc {
+  const w = clampCanvas(width);
+  const h = clampCanvas(height);
+  const { width: W, height: H } = doc.canvas;
+  if (w === W && h === H) return doc;
+  const s = Math.min(w / W, h / H);
+  const dx = (w - W * s) / 2;
+  const dy = (h - H * s) / 2;
+  return {
+    ...doc,
+    canvas: { width: w, height: h },
+    shapes: doc.shapes.map((sh) => ({ ...sh, circles: transformCircles(sh.circles, s, dx, dy) })),
+  };
+}
+
+/** Loads a preset fitted to the canvas (scaled by min(W, H) / 100 and centred). */
+export function loadPreset(current: ShapeDoc, canvas: CanvasSize, name: PresetName): ShapeDoc {
   const p = presetShape(name);
-  const shape = { ...p, fill: current.fill };
-  return current.symmetry ? setSymmetry(shape, width, true) : shape;
+  const s = Math.min(canvas.width, canvas.height) / PRESET_SIZE;
+  const dx = (canvas.width - PRESET_SIZE * s) / 2;
+  const dy = (canvas.height - PRESET_SIZE * s) / 2;
+  const shape = { ...p, fill: current.fill, circles: s === 1 && dx === 0 && dy === 0 ? p.circles : transformCircles(p.circles, s, dx, dy) };
+  return current.symmetry ? setSymmetry(shape, canvas.width, true) : shape;
 }

@@ -15,11 +15,22 @@ export interface ExportOptions {
   scale: number;
 }
 
+/** Session-only onion-skin reference image (never saved, exported or undone). */
+export interface Reference {
+  url: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  opacity: number;
+  visible: boolean;
+}
+
 export interface UIState {
   selectedId: string | null;
   overlay: boolean;
   corners: boolean;
-  grid: boolean;
+  pixelGrid: boolean;
+  iconGrid: boolean;
+  reference: Reference | null;
   snap: boolean;
   gridStep: number;
   view: View;
@@ -54,7 +65,9 @@ export class Store {
       selectedId: null,
       overlay: true,
       corners: false,
-      grid: true,
+      pixelGrid: true,
+      iconGrid: false,
+      reference: null,
       snap: true,
       gridStep: 1,
       view: fitView(width, height),

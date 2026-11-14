@@ -247,6 +247,22 @@ input[type='color']::-webkit-color-swatch {
   fill: none;
 }
 
+.canvas .icon-grid {
+  fill: none;
+  stroke: #000;
+  stroke-opacity: 0.25;
+  pointer-events: none;
+}
+
+.canvas .reference {
+  pointer-events: none;
+}
+
+.stage.drop-target {
+  outline: 2px dashed var(--blue);
+  outline-offset: -6px;
+}
+
 .canvas .axis {
   stroke: var(--blue);
   opacity: 0.35;
@@ -383,6 +399,54 @@ code {
 .name-input {
   flex: 1;
   font-weight: 600;
+}
+
+.canvas-size,
+.reference-row,
+.reference-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.canvas-size {
+  margin-bottom: 8px;
+}
+
+.canvas-size .field.inline input {
+  width: 64px;
+}
+
+.canvas-size button.icon {
+  width: 28px;
+  padding: 4px 0;
+}
+
+.reference-row {
+  margin-bottom: 12px;
+}
+
+.reference-controls {
+  flex: 1;
+}
+
+.reference-controls[hidden] {
+  display: none;
+}
+
+.reference-controls .grow {
+  flex: 1;
+}
+
+.reference-controls input[type='range'] {
+  width: 100%;
+  accent-color: var(--blue);
+}
+
+.small-num {
+  font-size: 12px;
+  min-width: 32px;
+  font-variant-numeric: tabular-nums;
 }
 
 .list-head {

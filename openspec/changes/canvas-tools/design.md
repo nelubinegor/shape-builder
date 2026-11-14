@@ -37,7 +37,7 @@ line    (0,0)-(24,24)        line (24,0)-(0,24)
 lines   x = 4, 8, 12, 16, 20 (full height)   y = 4, 8, 12, 16, 20 (full width)
 ```
 
-`iconGridPrimitives(W, H)` returns these as `{kind: 'circle'|'rect'|'line', …}` scaled by `k = min(W, H) / 24` and offset by `((W − 24k) / 2, (H − 24k) / 2)`. On a non-square canvas, the full-length lines span only the centred 24k square, as in Figma. The canvas renders them as `<g class="icon-grid" pointer-events="none">` after the shape, in black at the component's combined opacity (about 0.2 × 0.5). The stroke width is a constant 1 screen pixel, scaled by units-per-pixel like the other overlays. Picking is geometric (`pick()`) and never sees these elements; export builds from the document only, so the grid can't leak into either.
+`iconGridPrimitives(W, H)` returns these as `{kind: 'circle'|'rect'|'line', …}` scaled by `k = min(W, H) / 24` and offset by `((W − 24k) / 2, (H − 24k) / 2)`. On a non-square canvas, the full-length lines span only the centred 24k square, as in Figma. The canvas renders them as `<g class="icon-grid" pointer-events="none">` after the shape, in black at the component's combined opacity (a light 25% black, slightly stronger than Figma's 0.2 × 0.5 so the 1px lines stay visible on screen). The stroke width is a constant 1 screen pixel, scaled by units-per-pixel like the other overlays. Picking is geometric (`pick()`) and never sees these elements; export builds from the document only, so the grid can't leak into either.
 
 ### Grid state
 `ui.grid` becomes `ui.pixelGrid` (default on) plus `ui.iconGrid` (default off). Both are session UI state, not saved, like the other view toggles. `gridStep` and snapping are unchanged and independent of visibility. The toolbar replaces "Grid" with two toggles: "Pixel grid" and "Icon grid".
@@ -51,6 +51,9 @@ lines   x = 4, 8, 12, 16, 20 (full height)   y = 4, 8, 12, 16, 20 (full width)
   - The natural size is read by loading the URL into an `Image` before it's stored.
 - **Placement:** contain-fit inside the artboard: `s = min(W / iw, H / ih)`, centred. It's rendered as an SVG `<image>` with `preserveAspectRatio="none"` at the computed rect, after the paper and pixel grid and before the shape, with `pointer-events: none`.
 - **Onion skin:** while a reference is visible, the shape path gets `opacity: 0.6`. The panel shows a "Reference" section only when one exists: an opacity slider (0–100%, default 50%), Hide/Show and Remove.
+
+### Picking limit relative to the canvas
+Found during implementation: picking skipped interior clicks on circles with an on-screen radius over 150px (meant for the diamond's r90 circles). On a 24-unit canvas zoomed to fit, ordinary circles exceed that, so they couldn't be grabbed from inside. The limit is now half the canvas's larger side, in document units. That excludes oversized construction circles at any zoom and never depends on the view.
 
 ### Document bounds
 `parseDocument` rejects canvas sides outside [1, 4096] with "The canvas size must be between 1 and 4096 units." This is a tightening of the existing `> 0` check, and older saved documents are all 100×100.
