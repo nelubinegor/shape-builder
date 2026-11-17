@@ -2,7 +2,7 @@
 
 ## 1. Prerequisite
 
-- [ ] 1.1 Archive `canvas-tools` (sync its specs), and verify that `openspec validate my-shapes --strict` still passes against the updated main specs
+- [x] 1.1 Archive `canvas-tools` (sync its specs), and verify that `openspec validate my-shapes --strict` still passes against the updated main specs
 
 ## 2. Library model (`src/library.ts`)
 
