@@ -77,7 +77,7 @@ try {
   check('default view has a margin', s.ui.view.x < 0 && s.ui.view.w > 100);
 
   // Presets: exported SVG matches the canvas.
-  for (const name of ['cross', 'head', 'hand', 'circle']) {
+  for (const name of ['cross', 'head', 'hand', 'spade', 'heart', 'club', 'diamond', 'circle']) {
     await loadPreset(name);
     const d = await shapeD();
     await click('#copy-svg');
@@ -86,6 +86,9 @@ try {
     check(`preset ${name}: exported SVG matches canvas`, sameNums(nums(d), nums(exported), 1e-3));
     await shot(`preset-${name}`);
   }
+  const groups = await page.$$eval('#preset optgroup', (gs) => gs.map((g) => [g.label, [...g.querySelectorAll('option')].map((o) => o.value)]));
+  check('preset menu groups icons and card suits', JSON.stringify(groups) ===
+    JSON.stringify([['Icons', ['circle', 'cross', 'head', 'hand']], ['Card suits', ['spade', 'heart', 'club', 'diamond']]]));
   await loadPreset('hand');
   check('hand has 16 circles', (await state()).circles.length === 16);
 

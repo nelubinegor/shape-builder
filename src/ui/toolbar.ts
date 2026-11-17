@@ -1,7 +1,7 @@
 // Top toolbar: presets, toggles, history and document files.
 import { downloadText, parseDocument, pickTextFile, safeFileName, serialize } from '../document';
 import { loadPreset, setSymmetry } from '../ops';
-import { presetNames, type PresetName } from '../presets';
+import { iconPresetNames, suitPresetNames, type PresetName } from '../presets';
 import type { Store, UIState } from '../store';
 
 export interface ToolbarApi {
@@ -26,7 +26,8 @@ export function mountToolbar(host: HTMLElement, store: Store): ToolbarApi {
       <label class="sr-only" for="preset">Load preset</label>
       <select id="preset">
         <option value="">Preset…</option>
-        ${presetNames.map((n) => `<option value="${n}">${cap(n)}</option>`).join('')}
+        <optgroup label="Icons">${iconPresetNames.map((n) => `<option value="${n}">${cap(n)}</option>`).join('')}</optgroup>
+        <optgroup label="Card suits">${suitPresetNames.map((n) => `<option value="${n}">${cap(n)}</option>`).join('')}</optgroup>
       </select>
       <button class="toggle" id="symmetry" aria-pressed="false" title="Mirror on the vertical axis">Symmetry</button>
     </div>

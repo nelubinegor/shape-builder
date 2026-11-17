@@ -67,6 +67,10 @@ describe('presets', () => {
     expect(presetShape('cross').circles).toHaveLength(12);
   });
 
+  it('offers the icons first, then the card suits', () => {
+    expect(presetNames).toEqual(['circle', 'cross', 'head', 'hand', 'spade', 'heart', 'club', 'diamond']);
+  });
+
   it('a fresh document starts with the circle', () => {
     expect(newDocument().shapes[0].name).toBe('circle');
   });

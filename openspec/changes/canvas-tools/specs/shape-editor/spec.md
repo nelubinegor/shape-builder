@@ -18,7 +18,7 @@ The editor SHALL show an SVG canvas, 100×100 units by default and resizable, wi
 - **THEN** the cursor becomes a hand and a drag pans the view instead of moving circles
 
 ### Requirement: Preset shapes
-The editor SHALL offer circle, cross, head and hand presets. Circle is a single convex circle; cross, head (a profile silhouette) and hand (a peace-sign hand) reproduce the matching icons in the twostu Design Library in Figma. Presets are defined on a 100×100 artboard and MUST be scaled uniformly by min(width, height) / 100 and centred when loaded onto a canvas of another size. Loading a preset MUST be undoable.
+The editor SHALL offer icon presets (circle, cross, head, hand) followed by card-suit presets (spade, heart, club, diamond). Circle is a single convex circle; cross, head (a profile silhouette) and hand (a peace-sign hand) reproduce the matching icons in the twostu Design Library in Figma. Presets are defined on a 100×100 artboard and MUST be scaled uniformly by min(width, height) / 100 and centred when loaded onto a canvas of another size. Loading a preset MUST be undoable.
 
 #### Scenario: Load circle
 - **WHEN** the user picks the circle preset on the default 100×100 canvas
@@ -31,6 +31,10 @@ The editor SHALL offer circle, cross, head and hand presets. Circle is a single 
 #### Scenario: Presets are valid
 - **WHEN** any preset is loaded
 - **THEN** it has no invalid tangent pairs and no nested circles
+
+#### Scenario: Card suits are offered
+- **WHEN** the user opens the preset menu
+- **THEN** it lists circle, cross, head and hand under "Icons" and spade, heart, club and diamond under "Card suits"
 
 #### Scenario: Preset on a 24×24 canvas
 - **WHEN** the canvas is 24×24 and the user picks the circle preset

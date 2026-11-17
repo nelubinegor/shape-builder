@@ -24,6 +24,6 @@ npm run smoke    # drive the built app in Chromium (needs Playwright)
 - Canvas: set width × height under the shape name (locked square by default). Resizing scales the drawing to fit and is undoable; 24 matches the twostu icons.
 - Reference image: paste an image (Ctrl/Cmd+V), drop one on the canvas, or press "Reference…". It sits under the shape as an onion skin with an opacity slider, Hide and Remove. It isn't saved or exported.
 - Grids: "Pixel grid" (unit grid, used for snapping) and "Icon grid" (the twostu keyline grid from Figma, scaled to the canvas). Show either, both or neither.
-- Presets: circle (the default), cross, head and hand, traced from the twostu icon library. Symmetry mirrors edits across the vertical centre line.
+- Presets: circle (the default), cross, head and hand, traced from the twostu icon library, plus the card suits (spade, heart, club, diamond). Symmetry mirrors edits across the vertical centre line.
 - Export: flattened SVG (exact arcs), rounded-corner SVG (straight edges plus `data-corner-radii`), or Copy for Figma (VectorNetwork JSON).
 - Work is autosaved in the browser; Save/Open move documents as `.json` files.
