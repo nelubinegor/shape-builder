@@ -27,6 +27,13 @@
 - [x] 5.1 Extend `scripts/smoke.mjs`: resize 100→24 and undo, preset on a 24 canvas, both grid toggles and click-through, paste and drop of a generated PNG, reference not in the export or saved file and gone after reload. Verify that `npm run build && npm run smoke` passes
 - [x] 5.2 Run `npm test`, `npm run build` and `openspec validate canvas-tools --strict`. Verify that all pass
 
+## 6. Reference adjustment
+
+- [x] 6.1 Add `box` to `Reference` and the pure helpers `referenceBox`, `moveBox`, `scaleBoxFromCorner` in `src/reference.ts`. Verify with unit tests: the default is the fit box, moves add up, corner scaling keeps the aspect ratio and anchors the opposite corner, and the minimum width holds
+- [x] 6.2 Adjust mode on the canvas: image outline and corner handles, move/scale drags, no circle picking or adding, arrow/Shift nudges, Esc exits, Adjust hint text. Verify in the browser that dragging moves, a corner scales proportionally, and circles stay unchanged
+- [x] 6.3 Panel "Adjust/Done" and "Fit" buttons; Hide and Remove leave Adjust mode; a new paste starts fitted; README notes. Verify in the browser that Fit restores the placement and a new paste is fitted
+- [x] 6.4 Extend the smoke test with the adjustment scenarios and run `npm test`, `npm run build`, `npm run smoke` and `openspec validate canvas-tools --strict`. Verify that all pass
+
 ## Workflow follow-up
 
 - Archive `canvas-tools` after review; Vercel redeploys production on push to `main`.

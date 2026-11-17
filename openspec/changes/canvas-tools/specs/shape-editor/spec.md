@@ -91,6 +91,33 @@ The user SHALL be able to add a reference image by pasting an image (Ctrl/Cmd+V 
 - **WHEN** the clipboard holds only text and the user presses Ctrl+V outside a text field
 - **THEN** nothing changes
 
+### Requirement: Reference adjustment
+While a reference image exists, the panel SHALL offer an "Adjust" toggle and a "Fit" button. In Adjust mode, dragging on the canvas MUST move the image, dragging a corner handle MUST scale it proportionally about the opposite corner, arrow keys MUST nudge it (1 unit, 10 with Shift), and circles MUST NOT be picked, moved or added. Fit MUST restore the contain-fit placement. Esc, Done, Hide or Remove MUST leave Adjust mode.
+
+#### Scenario: Move the image
+- **WHEN** Adjust mode is on and the user drags across the canvas by (5, 3) units
+- **THEN** the image moves by (5, 3) and no circle changes
+
+#### Scenario: Scale from a corner
+- **WHEN** Adjust mode is on and the user drags the bottom-right handle outward
+- **THEN** the image grows with its aspect ratio unchanged and its top-left corner fixed
+
+#### Scenario: Nudge and fit
+- **WHEN** Adjust mode is on, the user presses Shift+Right and then Fit
+- **THEN** the image moves 10 units right, then returns to the fitted placement
+
+#### Scenario: Circles are protected while adjusting
+- **WHEN** Adjust mode is on and the user double-clicks empty canvas or drags a circle
+- **THEN** no circle is added or moved
+
+#### Scenario: Leave Adjust mode
+- **WHEN** Adjust mode is on and the user presses Esc
+- **THEN** Adjust mode turns off and clicks select circles again
+
+#### Scenario: New image starts fitted
+- **WHEN** the image has been moved and the user pastes another image
+- **THEN** the new image is placed with the contain-fit placement
+
 ### Requirement: Onion-skin display
 While a reference image is shown, the panel SHALL offer an opacity slider for it (default 50%) and buttons to hide/show and remove it, and the shape MUST be drawn semi-transparent (60% opacity) so both stay visible. The reference MUST NOT be saved with the document, exported, or recorded in undo history.
 

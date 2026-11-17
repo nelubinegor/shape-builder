@@ -38,6 +38,8 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
         <div class="reference-controls" id="reference-controls" hidden>
           <label class="field inline grow"><span class="sr-only">Reference opacity</span><input id="reference-opacity" type="range" min="0" max="100" step="1" aria-label="Reference opacity"></label>
           <span class="muted small-num" id="reference-opacity-label"></span>
+          <button id="reference-adjust" class="toggle" aria-pressed="false" title="Move and scale the image on the canvas">Adjust</button>
+          <button id="reference-fit" title="Fit the image to the artboard">Fit</button>
           <button id="reference-toggle">Hide</button>
           <button id="reference-remove">Remove</button>
         </div>
@@ -65,6 +67,7 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
   const refOpacity = host.querySelector<HTMLInputElement>('#reference-opacity')!;
   const refOpacityLabel = host.querySelector<HTMLSpanElement>('#reference-opacity-label')!;
   const refToggle = host.querySelector<HTMLButtonElement>('#reference-toggle')!;
+  const refAdjust = host.querySelector<HTMLButtonElement>('#reference-adjust')!;
   let locked = store.doc.canvas.width === store.doc.canvas.height;
   lock.setAttribute('aria-pressed', String(locked));
 
@@ -106,7 +109,17 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
   });
   refToggle.addEventListener('click', () => {
     const r = store.ui.reference;
-    if (r) store.setUI({ reference: { ...r, visible: !r.visible } });
+    if (r) store.setUI({ reference: { ...r, visible: !r.visible }, adjustingReference: false });
+  });
+  refAdjust.addEventListener('click', () => {
+    const r = store.ui.reference;
+    if (!r) return;
+    const on = !store.ui.adjustingReference;
+    store.setUI({ adjustingReference: on, reference: on ? { ...r, visible: true } : r, selectedId: on ? null : store.ui.selectedId });
+  });
+  host.querySelector('#reference-fit')!.addEventListener('click', () => {
+    const r = store.ui.reference;
+    if (r) store.setUI({ reference: { ...r, box: null } });
   });
   host.querySelector('#reference-remove')!.addEventListener('click', () => setReference(store, null));
 
@@ -158,6 +171,9 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
       refOpacityLabel.textContent = `${Math.round(ref.opacity * 100)}%`;
       refToggle.textContent = ref.visible ? 'Hide' : 'Show';
       refToggle.setAttribute('aria-pressed', String(!ref.visible));
+      const adj = store.ui.adjustingReference;
+      refAdjust.textContent = adj ? 'Done' : 'Adjust';
+      refAdjust.setAttribute('aria-pressed', String(adj));
     }
     if (document.activeElement !== nameInput) nameInput.value = shape.name;
     if (document.activeElement !== fillInput) fillInput.value = toHex(shape.fill);

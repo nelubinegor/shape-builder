@@ -12,7 +12,7 @@ The document format already stores `canvas: { width, height }`, and export, the 
 - The reference image never touches the document, undo or export.
 
 **Non-Goals:**
-- Transforming the reference image (move, scale, rotate), or saving it.
+- Rotating, cropping or non-proportionally stretching the reference image, or saving it.
 - Snapping to icon-grid keylines.
 - Per-shape canvases: the canvas is still one per document.
 
@@ -51,6 +51,21 @@ lines   x = 4, 8, 12, 16, 20 (full height)   y = 4, 8, 12, 16, 20 (full width)
   - The natural size is read by loading the URL into an `Image` before it's stored.
 - **Placement:** contain-fit inside the artboard: `s = min(W / iw, H / ih)`, centred. It's rendered as an SVG `<image>` with `preserveAspectRatio="none"` at the computed rect, after the paper and pixel grid and before the shape, with `pointer-events: none`.
 - **Onion skin:** while a reference is visible, the shape path gets `opacity: 0.6`. The panel shows a "Reference" section only when one exists: an opacity slider (0–100%, default 50%), Hide/Show and Remove.
+
+### Reference adjustment
+- **State:** `Reference` gains `box: { x, y, w } | null` in document units; `null` means contain-fit. Height is always `w × naturalHeight / naturalWidth`, so the aspect ratio can't drift. `ui.adjustingReference` holds the mode flag.
+- **Pure helpers** in `src/reference.ts`, unit-tested:
+  - `referenceBox(ref, W, H)` returns the stored box, or the fit box if none.
+  - `moveBox(box, dx, dy)`.
+  - `scaleBoxFromCorner(box, aspect, corner, p, minW)` keeps the opposite corner as the anchor. The new width is the larger of the pointer's horizontal distance from the anchor and its vertical distance converted by the aspect ratio, and never less than `minW` (1% of the canvas's larger side).
+- **Canvas:**
+  - In Adjust mode, the canvas draws a blue outline and four corner handles on the image.
+  - `pointerdown` hits a handle within 8px (scale drag), and otherwise starts a move drag anywhere.
+  - Picking, hover outlines and double-click adding are skipped. Space and middle-mouse panning still work.
+  - The hint line switches to the Adjust shortcuts.
+- **Keyboard:** the global handler routes arrows, Shift+arrows and Esc to the image while adjusting.
+- **Panel:** "Adjust"/"Done" (`aria-pressed`) and "Fit". Hide and Remove also leave Adjust mode, and a newly added image starts with `box: null`.
+- Image changes stay in UI state, so they're never saved, exported or undone, consistent with the reference itself.
 
 ### Picking limit relative to the canvas
 Found during implementation: picking skipped interior clicks on circles with an on-screen radius over 150px (meant for the diamond's r90 circles). On a 24-unit canvas zoomed to fit, ordinary circles exceed that, so they couldn't be grabbed from inside. The limit is now half the canvas's larger side, in document units. That excludes oversized construction circles at any zoom and never depends on the view.

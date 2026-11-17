@@ -391,6 +391,45 @@ try {
   await page.locator('#reference-opacity').evaluate((el) => { el.value = '20'; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await settle();
   check('opacity slider changes the image', (await page.getAttribute('.canvas image.reference', 'opacity')) === '0.2');
+  // ---- reference adjustment ----
+  const imgBox = () => page.locator('.canvas image.reference').evaluate((el) =>
+    ['x', 'y', 'width', 'height'].map((a) => Math.round(Number(el.getAttribute(a)) * 1000) / 1000));
+  const circlesBeforeAdjust = JSON.stringify((await state()).circles);
+  await click('#reference-adjust');
+  check('Adjust mode turns on', (await page.getAttribute('#reference-adjust', 'aria-pressed')) === 'true' &&
+    (await page.textContent('#canvas-hint')).includes('Adjusting image'));
+  await dragDoc([12, 12], [17, 15]);
+  let bx = await imgBox();
+  check('dragging moves the image', bx[0] === 5 && bx[1] === 9 && bx[2] === 24, bx.join(','));
+  await dragDoc([5, 9], [3, 8]); // top-left handle outward; bottom-right (29, 21) stays fixed
+  bx = await imgBox();
+  check('corner drag scales proportionally from the opposite corner', bx[0] === 3 && bx[1] === 8 && bx[2] === 26 && bx[3] === 13, bx.join(','));
+  await page.keyboard.press('Shift+ArrowRight');
+  await settle();
+  bx = await imgBox();
+  check('Shift+arrow nudges 10 units', bx[0] === 13, bx.join(','));
+  const pd = await toScreen(1, 1);
+  await page.mouse.dblclick(pd.x, pd.y);
+  await settle();
+  check('circles are protected while adjusting', JSON.stringify((await state()).circles) === circlesBeforeAdjust);
+  await click('#reference-fit');
+  bx = await imgBox();
+  check('Fit restores the fitted placement', bx[0] === 0 && bx[1] === 6 && bx[2] === 24, bx.join(','));
+  await dragDoc([12, 12], [14, 12]);
+  await page.keyboard.press('Escape');
+  await settle();
+  check('Esc leaves Adjust mode', (await page.getAttribute('#reference-adjust', 'aria-pressed')) === 'false');
+  await page.evaluate(async (b64) => {
+    const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([bytes], { type: 'image/png' }) })]);
+  }, pngB64);
+  await page.locator('.canvas').hover();
+  await page.keyboard.press('Control+v');
+  await page.waitForFunction(() => window.shapeBuilder.ui.reference?.box === null);
+  await settle();
+  bx = await imgBox();
+  check('a new paste starts fitted', bx[0] === 0 && bx[1] === 6, bx.join(','));
+  await shot('reference-adjust');
   await click('#reference-toggle');
   check('hide removes the image and restores the shape', (await page.locator('.canvas image.reference').count()) === 0 &&
     (await page.getAttribute('.canvas path.shape', 'opacity')) === null);

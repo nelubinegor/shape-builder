@@ -4,7 +4,9 @@ import { toSigned, type CircleDoc } from '../document';
 import { iconGridPrimitives } from '../iconGrid';
 import { pick, type PickResult } from '../interact';
 import { addCircleAt, deleteCircle, editCircle, toggleMode } from '../ops';
-import { addReference, fitReference, isImage, ONION_SHAPE_OPACITY } from '../reference';
+import {
+  addReference, aspectOf, boxCorners, isImage, moveBox, ONION_SHAPE_OPACITY, referenceBox, scaleBoxFromCorner, type Corner,
+} from '../reference';
 import { fitView, type Store, type View } from '../store';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -17,7 +19,9 @@ const MAX_VIEW = 2000;
 type Drag =
   | { kind: 'move'; id: string; dx: number; dy: number; pointerId: number }
   | { kind: 'resize'; id: string; pointerId: number }
-  | { kind: 'pan'; startX: number; startY: number; view: View; pointerId: number };
+  | { kind: 'pan'; startX: number; startY: number; view: View; pointerId: number }
+  | { kind: 'ref-move'; last: Pt; pointerId: number }
+  | { kind: 'ref-scale'; corner: Corner; pointerId: number };
 
 export interface CanvasApi {
   render(): void;
@@ -99,6 +103,26 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
     return pick(p, store.shape.circles, store.ui.selectedId, PICK_TOLERANCE_PX * u, maxR);
   };
 
+  const adjusting = () => !!store.ui.reference && store.ui.adjustingReference;
+
+  /** Corner handle of the reference image under the pointer (within the pick tolerance). */
+  const refCornerAt = (p: Pt): Corner | null => {
+    const ref = store.ui.reference;
+    if (!ref) return null;
+    const tol = PICK_TOLERANCE_PX * unitsPerPx();
+    const corners = boxCorners(referenceBox(ref, store.doc.canvas.width, store.doc.canvas.height), aspectOf(ref));
+    for (const k of ['nw', 'ne', 'se', 'sw'] as Corner[]) {
+      if (Math.hypot(p.x - corners[k].x, p.y - corners[k].y) <= tol) return k;
+    }
+    return null;
+  };
+
+  const setRefBox = (fn: (b: ReturnType<typeof referenceBox>) => ReturnType<typeof referenceBox>) => {
+    const ref = store.ui.reference;
+    if (!ref) return;
+    store.setUI({ reference: { ...ref, box: fn(referenceBox(ref, store.doc.canvas.width, store.doc.canvas.height)) } });
+  };
+
   const resizeCursor = (c: CircleDoc, p: Pt) => {
     const a = ((Math.atan2(p.y - c.y, p.x - c.x) * 180) / Math.PI + 180) % 180; // 0..180
     if (a < 22.5 || a >= 157.5) return 'ew-resize';
@@ -111,6 +135,10 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
     let cursor = 'default';
     if (drag?.kind === 'pan') cursor = 'grabbing';
     else if (spaceDown) cursor = 'grab';
+    else if (adjusting()) {
+      const corner = drag?.kind === 'ref-scale' ? drag.corner : p ? refCornerAt(p) : null;
+      cursor = corner ? (corner === 'nw' || corner === 'se' ? 'nwse-resize' : 'nesw-resize') : 'move';
+    }
     else if (drag?.kind === 'move' || hover?.action === 'move') cursor = 'move';
     else if ((drag?.kind === 'resize' || hover?.action === 'resize') && p) {
       const id = drag?.kind === 'resize' ? drag.id : hover!.id;
@@ -147,9 +175,10 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
 
     const onion = !!reference?.visible;
     if (onion && reference) {
-      const r = fitReference(reference.naturalWidth, reference.naturalHeight, W, H);
+      const b = referenceBox(reference, W, H);
+      const h = b.w * aspectOf(reference);
       parts.push(
-        `<image class="reference" href="${escAttr(reference.url)}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" preserveAspectRatio="none" opacity="${reference.opacity}"/>`,
+        `<image class="reference" href="${escAttr(reference.url)}" x="${b.x}" y="${b.y}" width="${b.w}" height="${h}" preserveAspectRatio="none" opacity="${reference.opacity}"/>`,
       );
     }
 
@@ -180,7 +209,7 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
     }
 
     // Circles: overlay shows all; selected, hovered and invalid circles always show.
-    const hoverId = drag ? null : hover?.id ?? null;
+    const hoverId = drag || adjusting() ? null : hover?.id ?? null;
     const ordered = shape.circles
       .map((c, i) => ({ c, i }))
       .sort((a, b) => Number(a.c.id === selectedId) - Number(b.c.id === selectedId));
@@ -210,10 +239,21 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
       parts.push(`<circle class="centre${sel ? ' selected' : ''}" cx="${c.x}" cy="${c.y}" r="${(sel ? 3 : 2) * u}"/>`);
       if (sel) parts.push(`<circle class="rim-handle" cx="${c.x + c.r}" cy="${c.y}" r="${3.5 * u}" stroke-width="${1.5 * u}"/>`);
     }
+    if (adjusting() && reference) {
+      const b = referenceBox(reference, W, H);
+      const h = b.w * aspectOf(reference);
+      parts.push(`<rect class="ref-outline" x="${b.x}" y="${b.y}" width="${b.w}" height="${h}" stroke-width="${1.5 * u}"/>`);
+      const s = 4 * u;
+      for (const c of Object.values(boxCorners(b, aspectOf(reference)))) {
+        parts.push(`<rect class="ref-handle" x="${c.x - s}" y="${c.y - s}" width="${2 * s}" height="${2 * s}" stroke-width="${1.5 * u}"/>`);
+      }
+    }
     layer.innerHTML = parts.join('');
 
     zoomLevel.textContent = `${Math.round((100 * W) / view.w)}%`;
-    hint.textContent = selectedId
+    hint.textContent = adjusting()
+      ? 'Adjusting image: drag to move · drag a corner to scale · arrows nudge (Shift ×10) · Esc done'
+      : selectedId
       ? 'Arrows move · Shift+arrows resize · C convex/concave · Delete removes · Esc deselects'
       : 'Double-click to add a circle · Space-drag to pan · Ctrl+scroll to zoom';
     updateCursor();
@@ -224,6 +264,10 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
     if (e.button !== 0 && e.button !== 1) return;
     if (e.button === 1 || spaceDown) {
       drag = { kind: 'pan', startX: e.clientX, startY: e.clientY, view: store.ui.view, pointerId: e.pointerId };
+    } else if (adjusting()) {
+      const p = toDoc(e);
+      const corner = refCornerAt(p);
+      drag = corner ? { kind: 'ref-scale', corner, pointerId: e.pointerId } : { kind: 'ref-move', last: p, pointerId: e.pointerId };
     } else {
       const p = toDoc(e);
       const hit = pickAt(p);
@@ -245,6 +289,10 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
 
   svg.addEventListener('pointermove', (e) => {
     const p = toDoc(e);
+    if (!drag && adjusting()) {
+      updateCursor(p);
+      return;
+    }
     if (!drag) {
       const next = pickAt(p);
       if (next?.id !== hover?.id || next?.action !== hover?.action) {
@@ -261,6 +309,21 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
       store.setUI({
         view: { ...drag.view, x: drag.view.x - (e.clientX - drag.startX) * u, y: drag.view.y - (e.clientY - drag.startY) * u },
       });
+      return;
+    }
+    if (drag.kind === 'ref-move') {
+      const { last } = drag;
+      setRefBox((b) => moveBox(b, p.x - last.x, p.y - last.y));
+      drag.last = p;
+      return;
+    }
+    if (drag.kind === 'ref-scale') {
+      const ref = store.ui.reference;
+      if (!ref) return;
+      const corner = drag.corner;
+      const minW = Math.max(store.doc.canvas.width, store.doc.canvas.height) * 0.01;
+      setRefBox((b) => scaleBoxFromCorner(b, aspectOf(ref), corner, p, minW));
+      updateCursor(p);
       return;
     }
     const id = drag.id;
@@ -282,7 +345,7 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
     const d = drag;
     drag = null;
     if (svg.hasPointerCapture(e.pointerId)) svg.releasePointerCapture(e.pointerId);
-    if (d.kind !== 'pan') {
+    if (d.kind === 'move' || d.kind === 'resize') {
       if (cancelled) store.cancel();
       else store.commit();
     }
@@ -299,7 +362,7 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
   });
 
   svg.addEventListener('dblclick', (e) => {
-    if (spaceDown) return;
+    if (spaceDown || adjusting()) return;
     const p = toDoc(e);
     if (pickAt(p)) return;
     const at = { x: round(snap(p.x, e.altKey)), y: round(snap(p.y, e.altKey)) };
@@ -370,6 +433,20 @@ export function mountCanvas(host: HTMLElement, store: Store): CanvasApi {
     const circles = store.shape.circles;
     const c = id ? circles.find((o) => o.id === id) : undefined;
     const onCanvas = e.target === svg;
+
+    if (adjusting()) {
+      if (e.key === 'Escape') {
+        store.setUI({ adjustingReference: false });
+        return true;
+      }
+      const dir = ({ ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] } as Record<string, number[]>)[e.key];
+      if (dir) {
+        const step = e.shiftKey ? 10 : 1;
+        setRefBox((b) => moveBox(b, dir[0] * step, dir[1] * step));
+        return true;
+      }
+      if (!['+', '=', '-', '_', '0'].includes(e.key)) return false;
+    }
 
     if (e.key === '+' || e.key === '=') zoomCentre(1 / 1.25);
     else if (e.key === '-' || e.key === '_') zoomCentre(1.25);

@@ -258,6 +258,18 @@ input[type='color']::-webkit-color-swatch {
   pointer-events: none;
 }
 
+.canvas .ref-outline {
+  fill: none;
+  stroke: var(--blue);
+  pointer-events: none;
+}
+
+.canvas .ref-handle {
+  fill: var(--paper);
+  stroke: var(--blue);
+  pointer-events: none;
+}
+
 .stage.drop-target {
   outline: 2px dashed var(--blue);
   outline-offset: -6px;
@@ -424,10 +436,12 @@ code {
 
 .reference-row {
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .reference-controls {
-  flex: 1;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
 }
 
 .reference-controls[hidden] {
@@ -435,7 +449,7 @@ code {
 }
 
 .reference-controls .grow {
-  flex: 1;
+  flex: 1 1 calc(100% - 48px);
 }
 
 .reference-controls input[type='range'] {

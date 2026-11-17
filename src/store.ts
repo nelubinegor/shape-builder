@@ -22,6 +22,14 @@ export interface Reference {
   naturalHeight: number;
   opacity: number;
   visible: boolean;
+  /** Placement in document units (height follows the aspect ratio); null = contain-fit. */
+  box: RefBox | null;
+}
+
+export interface RefBox {
+  x: number;
+  y: number;
+  w: number;
 }
 
 export interface UIState {
@@ -31,6 +39,7 @@ export interface UIState {
   pixelGrid: boolean;
   iconGrid: boolean;
   reference: Reference | null;
+  adjustingReference: boolean;
   snap: boolean;
   gridStep: number;
   view: View;
@@ -68,6 +77,7 @@ export class Store {
       pixelGrid: true,
       iconGrid: false,
       reference: null,
+      adjustingReference: false,
       snap: true,
       gridStep: 1,
       view: fitView(width, height),
