@@ -26,4 +26,4 @@ npm run smoke    # drive the built app in Chromium (needs Playwright)
 - Grids: "Pixel grid" (unit grid, used for snapping) and "Icon grid" (the twostu keyline grid from Figma, scaled to the canvas). Show either, both or neither.
 - Presets: circle (the default), cross, head and hand, traced from the twostu icon library, plus the card suits (spade, heart, club, diamond). Symmetry mirrors edits across the vertical centre line.
 - Export: flattened SVG (exact arcs), rounded-corner SVG (straight edges plus `data-corner-radii`), or Copy for Figma (VectorNetwork JSON).
-- Work is autosaved in the browser; Save/Open move documents as `.json` files.
+- My shapes: every shape you make is kept in the browser and autosaved. Open the My shapes menu to switch (thumbnails), or to create a New one, Duplicate or Delete. Picking a preset or opening a `.json` file adds a new shape instead of replacing the open one. Shapes live in this browser only; use Save to download a `.json` backup.

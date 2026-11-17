@@ -1,5 +1,7 @@
 // Top toolbar: presets, toggles, history and document files.
-import { downloadText, parseDocument, pickTextFile, safeFileName, serialize } from '../document';
+import { downloadText, parseDocument, pickTextFile, presetShape, safeFileName, serialize } from '../document';
+import { docName, type LibraryApi } from '../library';
+import { mountLibraryMenu } from './libraryMenu';
 import { loadPreset, setSymmetry } from '../ops';
 import { iconPresetNames, suitPresetNames, type PresetName } from '../presets';
 import type { Store, UIState } from '../store';
@@ -18,14 +20,15 @@ const TOGGLES: { key: Toggle; label: string; title: string }[] = [
   { key: 'snap', label: 'Snap', title: 'Snap drags to the grid' },
 ];
 
-export function mountToolbar(host: HTMLElement, store: Store): ToolbarApi {
+export function mountToolbar(host: HTMLElement, store: Store, library: LibraryApi): ToolbarApi {
   const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
   host.innerHTML = `
     <div class="brand">Shape Builder</div>
     <div class="tool-group">
-      <label class="sr-only" for="preset">Load preset</label>
+      <button id="my-shapes" title="Your saved shapes">My shapes ▾</button>
+      <label class="sr-only" for="preset">New shape from preset</label>
       <select id="preset">
-        <option value="">Preset…</option>
+        <option value="">New from preset…</option>
         <optgroup label="Icons">${iconPresetNames.map((n) => `<option value="${n}">${cap(n)}</option>`).join('')}</optgroup>
         <optgroup label="Card suits">${suitPresetNames.map((n) => `<option value="${n}">${cap(n)}</option>`).join('')}</optgroup>
       </select>
@@ -44,6 +47,7 @@ export function mountToolbar(host: HTMLElement, store: Store): ToolbarApi {
     </div>`;
 
   const preset = host.querySelector<HTMLSelectElement>('#preset')!;
+  mountLibraryMenu(host.querySelector<HTMLButtonElement>('#my-shapes')!, store, library);
   const symmetry = host.querySelector<HTMLButtonElement>('#symmetry')!;
   const undo = host.querySelector<HTMLButtonElement>('#undo')!;
   const redo = host.querySelector<HTMLButtonElement>('#redo')!;
@@ -51,9 +55,10 @@ export function mountToolbar(host: HTMLElement, store: Store): ToolbarApi {
   preset.addEventListener('change', () => {
     const name = preset.value as PresetName;
     if (!name) return;
-    store.updateShape((s) => loadPreset(s, store.doc.canvas, name));
-    store.select(null);
-    store.notify(`Loaded ${name}`);
+    // A preset becomes a new shape in My shapes, on the open shape's canvas size.
+    const shape = loadPreset(presetShape(name), store.doc.canvas, name);
+    library.create({ ...store.doc, canvas: { ...store.doc.canvas }, shapes: [shape] });
+    store.notify(`Created ${docName(store.doc)} in My shapes`);
     preset.value = '';
   });
 
@@ -88,9 +93,8 @@ export function mountToolbar(host: HTMLElement, store: Store): ToolbarApi {
       store.notify(`Could not open file. ${res.error}`, 'error');
       return;
     }
-    store.setDoc(res.doc);
-    store.select(null);
-    store.notify(`Opened ${res.doc.shapes[0].name}`);
+    library.create(res.doc);
+    store.notify(`Opened ${docName(store.doc)} as a new shape in My shapes`);
   });
 
   function render() {

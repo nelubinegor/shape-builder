@@ -165,3 +165,21 @@ describe('symmetry', () => {
     expect(p.circles.filter((c) => c.twinId)).toHaveLength(12);
   });
 });
+
+describe('loadDoc', () => {
+  it('opens another document with a fresh history', () => {
+    const st = new Store(newDocument(suitShape('heart')));
+    const id = st.shape.circles[0].id;
+    st.updateShape((s) => editCircle(s, W, id, { r: 10 }));
+    st.select(id);
+    expect(st.canUndo).toBe(true);
+    const other = newDocument(suitShape('club'));
+    st.loadDoc(other);
+    expect(st.doc).toBe(other);
+    expect(st.canUndo).toBe(false);
+    expect(st.canRedo).toBe(false);
+    expect(st.ui.selectedId).toBeNull();
+    st.undo();
+    expect(st.doc).toBe(other);
+  });
+});

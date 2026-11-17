@@ -296,16 +296,16 @@ try {
   await chooser.setFiles(savedPath);
   await page.waitForFunction(() => window.shapeBuilder.shape.circles.length === 16);
   check('open restores a saved file', true);
-  await page.keyboard.press('Control+z');
-  await settle();
-  check('open is undoable', (await state()).circles.length === 12);
+  const libAfterOpen = await page.evaluate(() => JSON.parse(localStorage.getItem('shape-builder.library')));
+  check('open adds a new shape and keeps the previous one', libAfterOpen.entries.some((e) => e.doc.shapes[0].circles.length === 12) &&
+    libAfterOpen.entries.find((e) => e.id === libAfterOpen.openId).doc.shapes[0].circles.length === 16);
   [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#open')]);
   await chooser.setFiles({
     name: 'bad.json', mimeType: 'application/json',
     buffer: Buffer.from('{"version":1,"canvas":{"width":100,"height":100},"shapes":[{"circles":[{"x":1,"y":2,"mode":"convex"}]}]}'),
   });
   await page.waitForSelector('.toast.error');
-  check('malformed file rejected with a message', (await state()).circles.length === 12);
+  check('malformed file rejected with a message', (await state()).circles.length === 16);
 
   // ---- canvas-tools: canvas size ----
   await loadPreset('circle');
@@ -467,6 +467,94 @@ try {
   await page.waitForSelector('.canvas path.shape');
   check('reference is gone after reload', (await page.locator('.canvas image.reference').count()) === 0);
   check('canvas size persists across reload', (await page.evaluate(() => window.shapeBuilder.doc.canvas.width)) === 24);
+
+  // ---- my-shapes: library ----
+  page.on('dialog', (d) => d.accept());
+  const lib = () => page.evaluate(() => JSON.parse(localStorage.getItem('shape-builder.library')));
+  const tile = (name) => page.locator('.library-tile', { has: page.locator('.library-name', { hasText: new RegExp(`^${name}$`) }) });
+  const openMenu = async () => {
+    if ((await page.getAttribute('#my-shapes', 'aria-expanded')) !== 'true') await click('#my-shapes');
+  };
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('.canvas path.shape');
+  check('first visit: one shape in My shapes', (await lib()).entries.length === 1);
+  await loadPreset('heart');
+  let L = await lib();
+  check('preset creates a new shape', L.entries.length === 2 && L.entries[1].doc.shapes[0].name === 'heart' && L.openId === L.entries[1].id);
+  check('previous shape is unchanged', L.entries[0].doc.shapes[0].circles.length === 1);
+  const hx = page.locator('.circle-row').nth(0).locator('input[data-key="x"]');
+  await hx.fill('72');
+  await hx.press('Enter');
+  await settle();
+  await openMenu();
+  check('menu lists every shape', (await page.locator('.library-tile').count()) === 2);
+  const tileD = await tile('heart').locator('path').getAttribute('d');
+  check('thumbnail reflects edits', tileD === (await shapeD()));
+  await tile('circle').click();
+  await settle();
+  check('switching opens the other shape', (await state()).circles.length === 1);
+  await page.keyboard.press('Control+z');
+  await settle();
+  check('undo does not cross shapes', (await state()).circles.length === 1 && (await lib()).entries[1].doc.shapes[0].circles[0].x === 72);
+  await openMenu();
+  await tile('heart').click();
+  await settle();
+  check('switching back keeps edits', (await state()).circles[0].x === 72);
+  await setSize('#canvas-w', 24);
+  await openMenu();
+  await click('[data-lib="new"]');
+  let d0 = await page.evaluate(() => window.shapeBuilder.doc);
+  check('New keeps the canvas size', d0.canvas.width === 24 && d0.shapes[0].circles.length === 1 && d0.shapes[0].name === 'shape');
+  await openMenu();
+  await tile('heart').click();
+  await settle();
+  await openMenu();
+  await click('[data-lib="duplicate"]');
+  d0 = await page.evaluate(() => window.shapeBuilder.doc);
+  check('Duplicate opens a copy', d0.shapes[0].name === 'heart copy' && d0.shapes[0].circles.length === 4);
+  const countBefore = (await lib()).entries.length;
+  await openMenu();
+  await click('[data-lib="delete"]');
+  L = await lib();
+  check('Delete removes the open shape', L.entries.length === countBefore - 1 && !L.entries.some((e) => e.doc.shapes[0].name === 'heart copy'));
+  // keyboard: open with Enter, arrows move, Esc closes and returns focus
+  await page.focus('#my-shapes');
+  await page.keyboard.press('Enter');
+  await settle();
+  const f1 = await page.evaluate(() => document.activeElement?.className);
+  await page.keyboard.press('ArrowRight');
+  const tileMoved = await page.evaluate(() => document.activeElement?.classList.contains('library-tile'));
+  await page.keyboard.press('Escape');
+  await settle();
+  check('menu works with the keyboard', f1.includes('library-tile') && tileMoved &&
+    (await page.getAttribute('#my-shapes', 'aria-expanded')) === 'false' &&
+    (await page.evaluate(() => document.activeElement?.id)) === 'my-shapes');
+  const openBefore = (await lib()).openId;
+  await page.reload();
+  await page.waitForSelector('.canvas path.shape');
+  L = await lib();
+  check('reload restores the library and open shape', L.openId === openBefore && L.entries.length === countBefore - 1);
+  for (let i = 0; i < 10 && (await lib()).entries.length > 1; i++) {
+    await openMenu();
+    await click('[data-lib="delete"]');
+  }
+  await openMenu();
+  await click('[data-lib="delete"]');
+  L = await lib();
+  check('deleting the last shape leaves a blank one', L.entries.length === 1 && L.entries[0].doc.shapes[0].circles.length === 1);
+  await page.evaluate(() => {
+    localStorage.removeItem('shape-builder.library');
+    localStorage.setItem('shape-builder.document', JSON.stringify({ version: 1, canvas: { width: 100, height: 100 },
+      shapes: [{ name: 'old one', fill: '#000000', symmetry: false, circles: [{ id: 'a', x: 30, y: 50, r: 10, mode: 'convex' }, { id: 'b', x: 70, y: 50, r: 10, mode: 'convex' }] }] }));
+  });
+  await page.reload();
+  await page.waitForSelector('.canvas path.shape');
+  L = await lib();
+  check('migrates the old autosave', L.entries.length === 1 && L.entries[0].doc.shapes[0].name === 'old one');
+  await openMenu();
+  await shot('my-shapes');
+  await page.keyboard.press('Escape');
 
   await shot('final');
   check('no console errors', errors.length === 0, errors.join(' | '));

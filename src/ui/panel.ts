@@ -69,6 +69,7 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
   const refToggle = host.querySelector<HTMLButtonElement>('#reference-toggle')!;
   const refAdjust = host.querySelector<HTMLButtonElement>('#reference-adjust')!;
   let locked = store.doc.canvas.width === store.doc.canvas.height;
+  let lastCanvasKey = '';
   lock.setAttribute('aria-pressed', String(locked));
 
   // Canvas size: commit on Enter/blur (each resize rescales the shape).
@@ -162,6 +163,15 @@ export function mountPanel(host: HTMLElement, store: Store): PanelApi {
     const shape = store.shape;
     const W = store.width;
     const { width: cw, height: ch } = store.doc.canvas;
+    const key = `${cw}x${ch}`;
+    if (key !== lastCanvasKey) {
+      // Another shape was opened (or the size changed elsewhere): the lock follows the canvas.
+      if (lastCanvasKey !== '' && document.activeElement !== canvasW && document.activeElement !== canvasH) {
+        locked = cw === ch;
+        lock.setAttribute('aria-pressed', String(locked));
+      }
+      lastCanvasKey = key;
+    }
     if (document.activeElement !== canvasW) canvasW.value = String(cw);
     if (document.activeElement !== canvasH) canvasH.value = String(ch);
     const ref = store.ui.reference;

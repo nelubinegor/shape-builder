@@ -151,6 +151,21 @@ export class Store {
     this.emit('doc');
   }
 
+  /** Opens another document: fresh undo history, no selection, view fitted. Not undoable. */
+  loadDoc(doc: Doc): void {
+    this.txBase = null;
+    this.past = [];
+    this.future = [];
+    this.doc = doc;
+    this.ui = {
+      ...this.ui,
+      selectedId: null,
+      adjustingReference: false,
+      view: fitView(doc.canvas.width, doc.canvas.height),
+    };
+    this.emit('doc');
+  }
+
   get canUndo(): boolean {
     return this.past.length > 0;
   }

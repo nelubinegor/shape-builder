@@ -1,5 +1,8 @@
 import './style.css';
-import { loadStored, saveStored } from './document';
+import {
+  addEntry, duplicateEntry, loadLibrary, openDoc, openEntry, removeEntry, saveLibrary, updateEntry,
+  type Library, type LibraryApi,
+} from './library';
 import { addReference, isImage } from './reference';
 import { fitView, Store } from './store';
 import { mountCanvas } from './ui/canvas';
@@ -27,10 +30,48 @@ app.innerHTML = `
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>`;
 
-const restored = loadStored(storage);
-const store = new Store(restored.doc);
+const restored = loadLibrary(storage);
+let lib: Library = restored.lib;
+const store = new Store(openDoc(lib));
+let storageWarned = false;
+const persist = () => {
+  if (saveLibrary(storage, lib)) return;
+  if (!storageWarned) store.notify("Browser storage is full: your latest changes aren't saved. Save a .json copy.", 'error');
+  storageWarned = true;
+};
 
-const toolbar = mountToolbar(document.getElementById('toolbar')!, store);
+persist(); // write immediately so a first visit or a migrated autosave is stored right away
+
+/** Opens the library's open entry in the editor (after the library changed which one is open). */
+const showOpen = () => {
+  persist();
+  store.loadDoc(openDoc(lib));
+};
+const library: LibraryApi = {
+  list: () => lib.entries,
+  get openId() {
+    return lib.openId;
+  },
+  open(id) {
+    if (id === lib.openId) return;
+    lib = openEntry(lib, id);
+    showOpen();
+  },
+  create(doc) {
+    lib = addEntry(lib, doc).lib;
+    showOpen();
+  },
+  duplicateOpen() {
+    lib = duplicateEntry(lib, lib.openId).lib;
+    showOpen();
+  },
+  deleteOpen() {
+    lib = removeEntry(lib, lib.openId);
+    showOpen();
+  },
+};
+
+const toolbar = mountToolbar(document.getElementById('toolbar')!, store, library);
 const canvas = mountCanvas(document.getElementById('stage')!, store);
 const panel = mountPanel(document.getElementById('panel')!, store);
 const exporter = mountExportPanel(document.getElementById('export')!, store);
@@ -65,7 +106,8 @@ const schedule = () => {
 let lastCanvas = `${store.doc.canvas.width}x${store.doc.canvas.height}`;
 store.subscribe((s, kind) => {
   if (kind === 'doc') {
-    saveStored(storage, s.doc);
+    lib = updateEntry(lib, lib.openId, s.doc);
+    persist();
     const size = `${s.doc.canvas.width}x${s.doc.canvas.height}`;
     if (size !== lastCanvas) {
       // Resize, undo/redo of a resize, or opening a file: show the whole new artboard.
@@ -118,7 +160,7 @@ window.addEventListener('paste', (e) => {
 });
 
 renderAll();
-if (restored.error) store.notify(restored.error, 'error');
+if (restored.warning) store.notify(restored.warning, 'error');
 
 // Expose for debugging and smoke tests.
 (window as unknown as { shapeBuilder: Store }).shapeBuilder = store;
